@@ -22,159 +22,147 @@ Docs: `landing-zone/README.md`, `landing-zone/reference/ARCHITECTURE.md`, `SCP-D
 - [x] GENAI-RUNTIME.md — GenAI agentic runtime module designs
 
 ### 1.2 Bootstrap terraservice (`landing-zone/bootstrap/`)
-- [x] Organization (`aws_organizations_organization`, ALL features) + service principals — `main.tf`
-- [x] OU structure (Infrastructure/Network, Production/{Platform,Research,DataPlatform}, Pre-Production/{Platform,Research}, Development/{Platform,Research}, Sandbox) — `main.tf`
-- [x] 9 SCPs wired to OUs — `scps.tf` + `policies/*.json` (deny-root-actions, restrict-regions, enforce-encryption, deny-cloudtrail-disable, deny-public-access, enforce-deletion-protection, deny-snapshot-skip, protect-log-archive, enforce-tags)
-- [x] IAM Identity Center admin permission set (optional) — `sso.tf`
-- [x] Tests: `defaults.tftest.hcl`, `compliance.tftest.hcl` — run via `tofu test tests/` (14 pass, incl. mandatory-tags SCP)
-- [ ] **Member accounts** — reference note: `accounts.tf` resources are commented out by design. A team **cloning** this landing zone uncomments them with their own email aliases (9 accounts per SCP-DESIGN) and applies against their real org. Not applied in this repo.
-- [ ] Add `prod.tftest.hcl` to bootstrap (only defaults + compliance currently)
-- [ ] Verify SCP JSON files match the approved 9 SCPs in SCP-DESIGN (filenames differ — confirm semantics align)
+- [x] Organization + OU structure + 9 SCPs + SSO
+- [x] Tests: `defaults.tftest.hcl`, `compliance.tftest.hcl` (14 pass)
+- [ ] Member accounts — reference note: commented out by design
+- [ ] Add `prod.tftest.hcl` to bootstrap
+- [ ] Verify SCP JSON files match the approved 9 SCPs in SCP-DESIGN
 
 ### 1.3 Baseline terraservice (`landing-zone/baseline/`)
-- [x] Immutable audit bucket (Object Lock COMPLIANCE, 2557-day, KMS, versioning, SecureTransport deny, `prevent_destroy`) — `audit-bucket.tf`
-- [x] Audit KMS key — `audit-bucket.tf`
-- [x] Org CloudTrail → audit S3 + CloudWatch — `cloudtrail.tf`
-- [x] AWS Config recorder + delivery channel — `config.tf`
-- [x] GuardDuty + Security Hub delegation — `security-hub-guardduty.tf`
-- [x] `deploy-role` module wiring (opentofu-deploy CI/CD role) — `main.tf`
-- [x] Docker-less gating via `log_archive_account_id` / `security_account_id` (null = skip)
+- [x] Immutable audit bucket, KMS key, CloudTrail, Config, GuardDuty, Security Hub, deploy-role
 - [x] Tests: `defaults.tftest.hcl`
-- [ ] Add `compliance.tftest.hcl` (audit bucket Object Lock + retention gate) to baseline
-- [ ] Add `prod.tftest.hcl` to baseline
+- [ ] Add `compliance.tftest.hcl` (audit bucket Object Lock + retention gate)
+- [ ] Add `prod.tftest.hcl`
 
 ---
 
 ## 2. Modules (aws)
 
-Gate per module: `main/variables/outputs/locals/versions` + `tests/` + `README.md` + `examples/` + `policies/*.rego`. P0/P1/P2 priorities from `REQUIREMENTS.md §4`.
+### 2.1 P0 — core (complete)
+- [x] kms-key — built, tested, README'd
+- [x] s3-bucket — built, tested, README'd
+- [x] vpc — built, 16 tests pass, README'd
+- [x] deploy-role — built, 17 tests pass, README'd
+- [x] iam-role — built, 19 tests pass, README'd
+- [x] cross-account-role — built, 17 tests pass, README'd
+- [x] transit-gateway-attachment — built, 10 tests pass, OPA rego, Checkov clean
+- [x] vpc-endpoint — built, 10 tests pass, OPA rego, Checkov clean
+- [x] cloudtrail — built, 18 tests pass, Checkov 50/0/5
 
-### 2.1 P0 — core
-**`modules/aws/kms-key`** — near complete
-- [x] main / variables / outputs / locals / versions
-- [x] README.md · examples/basic-usage · tests/{defaults,prod,compliance}
-- [ ] `policies/` OPA rego (optional; no `policies/` dir yet)
-
-**`modules/aws/s3-bucket`** — near complete
-- [x] main / variables / outputs / locals / versions
-- [x] README.md · examples/basic-usage · tests/{defaults,audit,compliance}
-- [ ] `policies/` OPA rego (optional)
-
-**`modules/aws/vpc`** — complete (finished this session)
-- [x] main / variables / outputs / locals / versions
-- [x] tests/{defaults,prod,compliance}.tftest.hcl — 16 assertions pass
-- [x] README.md
-- [x] examples/basic-usage
-- [ ] `policies/` OPA rego (optional)
-
-**`modules/aws/deploy-role`** — complete (this session)
-- [x] main / variables / outputs / versions + README.md
-- [x] tests/{defaults,prod,compliance}.tftest.hcl — 17 pass
-- [x] examples/basic-usage
-- [ ] `policies/` OPA rego (optional) — deliberately skipped: scope policy uses scoped `Resource=["*"]` that would false-positive; documented in README
-
-**Not yet created (from REQUIREMENTS §4 P0):**
-- [x] `modules/aws/iam-role` — used by all environment `iam/` terraservices (built this session; 19 tests pass)
-- [x] `modules/aws/cross-account-role` — used by all accounts (built this session; 17 tests pass)
-- [x] `modules/aws/transit-gateway-attachment` — attaches workload VPC to Network Hub TGW; centralized inspection via `appliance_mode_support` (built this session; 10 tests pass, OPA rego + Checkov clean)
-- [x] `modules/aws/vpc-endpoint` — Gateway (S3/DynamoDB, free) + Interface (SSM/STS/KMS/etc., multi-AZ) private endpoints (built this session; 10 tests pass, OPA rego + Checkov clean)
-
-**Proposed in CLAUDE.md (not in REQUIREMENTS table):**
-- [x] `modules/aws/cloudtrail` (Pillars 5, 7, 8) — org/multi-region trail, COMPLIANCE Object Lock audit bucket (7-yr), KMS encryption, log-file validation, CloudWatch stream + ingestion alarm, SecureTransport deny — 18 tests pass, Checkov 50/0/5 (documented skips)
-- [ ] `modules/aws/backup-vault` (Pillar 6 — Backup, DR & Deletion Protection)
-- [ ] `modules/aws/oidc-identity-provider` (Pillar 2 — Access Control & Least Privilege)
+**Still missing (from CLAUDE.md proposals):**
+- [ ] `modules/aws/backup-vault` (Pillar 6)
+- [ ] `modules/aws/oidc-identity-provider` (Pillar 2)
 - [ ] `modules/aws/security-hub` (Pillars 5, 9)
 
-### 2.2 P1 — GenAI runtime (from `GENAI-RUNTIME.md`)
-- [x] `modules/aws/opensearch-collection` (P1) — vector store/RAG; always-private AOSS VPC endpoint + network policy, KMS CMK encryption policy, retention ≥ 30 (lifecycle precondition), standby replicas — 17 tests pass, Checkov 5/0/0, OPA verified. NOTES: real `aws_opensearchserverless_collection` schema (no `security_config`/`vpc_options`); separate `aws_opensearchserverless_vpc_endpoint`/`security_policy`/`access_policy`/`lifecycle_policy` resources
-- [ ] `modules/aws/bedrock-endpoint` (P1) — inference; invocation logging mandatory for phi/pii/financial, guardrail warn in prod (LAST — per user)
-- [ ] `modules/aws/bedrock-guardrail` (P1) — content safety / PII / prompt injection; OPA fail on PII-redaction OFF for PHI (LAST — per user)
-- [x] `modules/aws/sagemaker-domain` (P1) — private VPC-only SageMaker Studio (never public), KMS-encrypted, least-privilege execution role, default user profile — 15 tests pass, Checkov 15/0/0
-- [x] `modules/aws/rds-pgvector` (P1) — Aurora PostgreSQL + pgvector parameter group + RDS Proxy + **cross-region DR (opt-in Aurora Global Cluster, gated to approved regions + PHI-sovereign)** + **snapshot immutability (SnapshotGuard tag + OPA rule denying wildcard snapshot-delete)** — 18 tests pass, Checkov 47/0/4, OPA rego verified against bad/good IAM inputs
+### 2.2 P1 — GenAI runtime (complete)
+- [x] opensearch-collection — 17 tests pass, Checkov 5/0/0, OPA verified
+- [x] sagemaker-domain — 15 tests pass, Checkov 15/0/0
+- [x] rds-pgvector — 18 tests pass, Checkov 47/0/4, OPA verified
+- [ ] bedrock-endpoint (deferred — LAST per user)
+- [ ] bedrock-guardrail (deferred — LAST per user)
 
-_OPA rules + Checkov CKV mappings for each GenAI module are specified in GENAI-RUNTIME.md §4 — carry them into each `policies/` dir._
+### 2.3 P2 — compute/data
+- [x] ecs-cluster — 15 tests pass, Checkov 10/0/1
+- [ ] ecs-service
+- [ ] elasticache
 
-### 2.3 P2 — compute/data (from REQUIREMENTS §4)
-- [x] `modules/aws/ecs-cluster` (P2) — Fargate-first capacity providers, Container Insights, KMS-encrypted task log group, exec sessions, CPU/memory alarms — 15 tests pass, Checkov 10/0/1
-- [ ] `modules/aws/ecs-service` (P2)
-- [ ] `modules/aws/ecs-service` (P2)
-- [ ] `modules/aws/elasticache` (P2)
-
-### 2.4 GCP (future scope per Mission Statement — not planned for initial release)
-- [ ] `gcp/audit-logs` (Pillars 5, 7, 8) — *deferred*
-- [ ] `gcp/vpc-service-controls` (Pillars 3, 7) — *deferred*
+### 2.4 GCP (future scope — deferred)
 
 ---
 
 ## 3. Environments / terraservices
 
-**`environments/` scaffolding started.** Network Hub transit-gateway is built and verified (below); all other accounts/OUs below are **not started**. Structure from `README.md`, `REQUIREMENTS.md §2`, and `STATE-STRATEGY.md`.
+### 3.1 Infra-Control-Plane
+- [x] `network-hub/transit-gateway/` — hub TG + RAM share + SSM pointer. 8 tests pass, Checkov/OPA clean.
+- [ ] `network-hub/endpoints/` — shared VPC endpoints (S3/DynamoDB gateway + interface), cross-account exposure design pending
+- [ ] `shared-tools/compute/`
 
-### 3.1 Infra-Control-Plane — platform/infra-team shared accounts
-- [x] `environments/infra-control-plane/network-hub/transit-gateway/` — the hub TG, **RAM resource share** for cross-account discovery (workload accounts accept the share + look up the TG locally; SSM param kept as same-account/human pointer only), `participants` least-privilege var, KMS CMK on the SSM param (Pillar 1), region + PHI-sovereign gates, `compliance_controls` output, OPA rego (enforces RAM share). 8/8 tests pass, Checkov 4/0/1 (documented skip), rego verified both directions.
-- [ ] `environments/infra-control-plane/network-hub/endpoints/` — shared VPC endpoints (S3/DynamoDB gateway + interface), cross-account exposure design pending. Apply-order item 2.
-- [ ] `environments/infra-control-plane/shared-tools/compute/`
+### 3.2 Development / Platform — FIRST REFERENCE WORKLOAD (this PR)
+**Scaffolded (boilerplate, ready for customization):**
+- [x] `iam/` — 4 IAM roles (ecs-task-exec, ecs-service, sagemaker-exec, rds-proxy + dev KMS key)
+  - [x] variables.tf, locals.tf, main.tf, outputs.tf, versions.tf
+  - [x] README.md — with blast radius table and dependency explanation
+  - [x] tests/defaults.tftest.hcl, tests/compliance.tftest.hcl
+  - [x] policies/iam.rego
+- [x] `network/` — VPC (3 tiers × 2 AZs), TGW attachment, route tables with TGW default route, VPC endpoints (gateway + interface)
+  - [x] variables.tf, locals.tf, main.tf, outputs.tf, versions.tf
+  - [x] README.md — with blast radius table
+  - [x] tests/defaults.tftest.hcl
+  - [x] policies/network.rego
+- [x] `data/` — Aurora pgvector + OpenSearch Serverless (dev-sized: serverless, no standby replicas)
+  - [x] variables.tf, locals.tf, main.tf, outputs.tf, data.tf, versions.tf
+  - [x] README.md — with blast radius table and remote state contract
+  - [x] tests/defaults.tftest.hcl
+  - [x] policies/data.rego
+- [x] `compute/` — ECS cluster (Fargate-only, dev-sized)
+  - [x] variables.tf, locals.tf, main.tf, outputs.tf, data.tf, versions.tf
+  - [x] README.md — with blast radius table
+  - [x] tests/defaults.tftest.hcl
+  - [x] policies/compute.rego
+- [x] `ai/` — SageMaker Studio domain (VpcOnly, ml.t3.medium, Bedrock deferred)
+  - [x] variables.tf, locals.tf, main.tf, outputs.tf, data.tf, versions.tf
+  - [x] README.md — with blast radius table
+  - [x] tests/defaults.tftest.hcl
+  - [x] policies/ai.rego
+- [x] Platform-level README.md — explains the layering model, safety, blast radius, and why not one big state
 
-### 3.2 Production — `/Production/*`
+**Customization checklist for the team cloning this reference:**
+- [x] DB credentials now use `manage_master_user_password = true` (RDS-managed) — no manual secret needed
+- [x] OpenSearch `iam.principal_arns` reads compute/ai role ARNs via SSM — no manual fill-in needed
+- [ ] Add a `data` source or appropriate lookup for `flow_log_destination.bucket_arn` — read from the baseline terraservice's remote state or a central config store
+- [ ] Uncomment Bedrock modules in `ai/main.tf` when ready
+- [ ] Adjust `region` and `subnets.availability_zones` to match your target region
+- [ ] Adjust `vpc_cidr` and `reserved_cidrs` to fit your IPAM plan
+- [ ] Adjust the `data.aws_ram_resource_share` name filter in `network/data.tf` to match your hub TG share name
+
+### 3.3 Production — `/Production/*`
 - [ ] `environments/production/platform/{iam,network,data,compute,ai}/`
 - [ ] `environments/production/research/{iam,network,data,compute,ai}/`
 - [ ] `environments/production/data-platform/{iam,network,data,compute,ai}/`
 
-### 3.3 Pre-Production — `/Pre-Production/*`
+### 3.4 Pre-Production — `/Pre-Production/*`
 - [ ] `environments/preprod/platform/{iam,network,data,compute,ai}/`
-
-### 3.4 Development — `/Development/*`
-- [ ] `environments/development/platform/{iam,network,data,compute,ai}/`
 
 ### 3.5 Sandbox — `Sandbox` (minimal SCPs)
 - [ ] `environments/sandbox/platform/{iam,network}/`
 
-**Layering order after accounts exist (STATE-STRATEGY §4):** bootstrap → baseline → Network Hub (transit gateway + endpoints) → workload terraservices (iam → network/TGWA → data/compute/ai).
-
 ---
 
-## 4. Scaffolding skills (`/` commands)
+## 4. Skills (`/` commands)
 
-All 7 skills exist and are symlinked from `~/Developer/agents/terraform-agents/` into `.claude/skills/` (`make symlink-skills`). Verify freshness as modules land:
-- [x] `/create-module` — module skeleton generator
-- [x] `/review-module` — fmt/validate/Checkov/OPA/Infracost + audit checklist
-- [x] `/create-workload` — terraservice layer scaffold
-- [x] `/add-environment` — new AWS account + business unit directory
-- [x] `/add-compliance-gates` — injects standard pillar variable blocks
-- [x] `/add-genai-module` — GenAI agentic runtime module scaffold (consumes GENAI-RUNTIME.md)
-- [x] `/ci-pipeline` — CI/CD config generation (GitHub Actions, Atlantis, OIDC)
+All 7 skills exist and are symlinked:
+- [x] `/create-module`, `/review-module`, `/create-workload`, `/add-environment`, `/add-compliance-gates`, `/add-genai-module`, `/ci-pipeline`
 
 ---
 
 ## 5. CI / automation
 
 ### 5.1 Present
-- [x] Tooling Makefile (`fmt-check`, `validate`, `checkov`, `plan`, `opa`, `test`, `infracost`, `review`, `all`, `symlink-skills`, `setup`) — `Makefile`
-- [x] GitHub Actions `module-review.yml` — per-module fmt/validate/checkov/opa/test/infracost matrix on PRs touching `modules/**`
+- [x] Makefile (`fmt-check`, `validate`, `checkov`, `plan`, `opa`, `test`, `infracost`, `review`, `all`, `symlink-skills`, `setup`)
+- [x] GitHub Actions `module-review.yml` — per-module review on PRs touching `modules/**`
 - [x] `scripts/setup-dev.sh` — dev tool installer
 
-### 5.2 Missing (from CLAUDE.md §CI/CD & Automation)
-- [ ] `.github/CODEOWNERS` — REQUIRES.md §6 specifies the path-based team map; **file absent**
-- [ ] Atlantis config (`atlantis.yaml`, `repos.yaml`) — no Atlantis files on disk
-- [ ] OIDC federation setup docs / workflow (roles assumed via OIDC only, no static creds) — none present
-- [ ] Commit signing enforcement (GPG on `main`, signed tags, branch protection) — no config/docs present
-- [ ] Auto-tag/SBOM on merge to main (`vMAJOR.MINOR.PATCH`, changelog from PR titles, SBOM from `tofu providers`) — not wired
-- [ ] Drift detection (scheduled `tofu plan`, results to drift channel) — not wired
-- [ ] Atlantis workflows for approval gates (dev single-approve auto-apply, staging infra-approve, prod dual-approve) — not wired
-- [ ] Infracost on every PR (Atlantis integration) — only module-review workflow currently
+### 5.2 Missing
+- [ ] `.github/CODEOWNERS`
+- [ ] Atlantis config (`atlantis.yaml`, `repos.yaml`)
+- [ ] OIDC federation setup docs / workflow
+- [ ] Commit signing enforcement (GPG, signed tags, branch protection)
+- [ ] Auto-tag/SBOM on merge to main
+- [ ] Drift detection (scheduled `tofu plan`)
+- [ ] Atlantis workflows for approval gates
+- [ ] Infracost on every PR (Atlantis integration)
 
 ---
 
 ## 6. Compliance verification gates
 
-Per-module (and terraservice) gates defined in `CLAUDE.md` — run before release:
-- [x] `tofu fmt -check` wired into CI (module-review)
+- [x] `tofu fmt -check` wired into CI
 - [x] `tofu validate` wired into CI
 - [x] Checkov (fail HIGH/CRITICAL) wired into CI
-- [x] OPA eval (Rego) wired into CI **only where `policies/` exists** — add policies dirs to each module
-- [x] Infracost breakdown wired into CI (module-review)
-- [ ] Full `tofu test` across all modules (kms-key + s3-bucket pass; vpc/deploy-role need tests first)
-- [ ] Audit checklist (CLAUDE.md Module Audit Checklist) confirmed per module before release
+- [x] OPA eval wired into CI (where `policies/` exists)
+- [x] Infracost breakdown wired into CI
+- [ ] Full `tofu test` across all modules
+- [ ] Audit checklist confirmed per module before release
 
 ---
 
@@ -183,15 +171,9 @@ Per-module (and terraservice) gates defined in `CLAUDE.md` — run before releas
 | Area | Complete | Outstanding |
 |---|---|---|
 | Landing zone — reference docs | 4/4 | — |
-| Landing zone — bootstrap | core complete | member accounts, prod test, SCP filename audit |
+| Landing zone — bootstrap | core complete | member accounts, prod test, SCP audit |
 | Landing zone — baseline | core complete | compliance + prod tests |
-| Modules P0 (kms, s3) | near-complete | regos (deferred — documented layered model) |
-| Modules P0 (vpc, deploy-role) | vpc + deploy-role complete | regos |
-| Modules P0 (iam-role, cross-account-role, TGW-attach, vpc-endpoint) | all P0 modules now built | none — P0 complete |
-| SCP catalog | 9 SCPs incl. EnforceMandatoryTags | — |
-| Modules P1 (GenAI) | rds-pgvector, opensearch-collection, sagemaker-domain complete (each verified: tests + Checkov + OPA) | Bedrock (endpoint + guardrail) LAST — per user |
-| Modules P2 (compute/audit) | ecs-cluster, cloudtrail complete | ecs-service (next), backup-vault, oidc-identity-provider, security-hub |
-| Environments / terraservices | `infra-control-plane/network-hub/transit-gateway` (hub TG + RAM share for cross-account discovery, SSM as same-account pointer; 8 tests pass, Checkov/OPA clean) | `network-hub/endpoints`; then reference dev+prod workload pair (`iam` → `network` accepts RAM share + looks up TG locally → `data`/`compute`/`ai`) |
+| All modules P0–P2 (14 modules) | 14 built, tested, README'd | bedrock (deferred), ecs-service, elasticache, backup-vault, oidc-idp, security-hub |
+| **Environments / terraservices** | **dev/platform scaffolded (5 layers, 44+ files)** | **network-hub/endpoints, all other envs** |
 | Skills | 7/7 built | re-verify after modules land |
 | CI | checkov/opa/test/infracost workflow | CODEOWNERS, Atlantis, OIDC, signing, drift, tag/SBOM |
-| Persona & positioning | persona in CLAUDE.md + README; greenfield/adopt flags in bootstrap & baseline | build the adoption path guide for existing-org teams |

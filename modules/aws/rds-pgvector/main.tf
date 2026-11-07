@@ -104,7 +104,8 @@ resource "aws_rds_cluster" "this" {
   global_cluster_identifier       = var.backup.cross_region_replica ? aws_rds_global_cluster.this[0].id : null
   database_name                   = "app"
   master_username                 = var.master_username
-  master_password                 = var.master_password
+  manage_master_user_password     = true
+  master_user_secret_kms_key_id   = var.kms_key_arn
   storage_encrypted               = true
   kms_key_id                      = var.kms_key_arn
   db_subnet_group_name            = aws_db_subnet_group.this.name
@@ -236,12 +237,13 @@ resource "aws_iam_role_policy" "proxy" {
   name = "${var.name}-rds-proxy-policy"
   role = aws_iam_role.proxy.id
   # Least privilege — the proxy reads only the DB credentials secret (Pillar 2 — Access Control & Least Privilege).
+  # Defaults to the RDS-managed secret when var.secret_arn is null.
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
       Action   = ["secretsmanager:GetSecretValue"]
-      Resource = [var.secret_arn]
+      Resource = [var.secret_arn != null ? var.secret_arn : aws_rds_cluster.this.master_user_secret[0].secret_arn]
     }]
   })
 }
@@ -259,7 +261,7 @@ resource "aws_db_proxy" "this" {
 
   auth {
     auth_scheme = "SECRETS"
-    secret_arn  = var.secret_arn
+    secret_arn  = var.secret_arn != null ? var.secret_arn : aws_rds_cluster.this.master_user_secret[0].secret_arn
     iam_auth    = "DISABLED"
   }
 }
