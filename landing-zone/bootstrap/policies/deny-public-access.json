@@ -1,0 +1,59 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyPublicS3Acl",
+      "Effect": "Deny",
+      "Action": [
+        "s3:PutBucketAcl",
+        "s3:PutObjectAcl"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "s3:x-amz-acl": [
+            "public-read",
+            "public-read-write",
+            "authenticated-read"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "DenyPublicS3Policy",
+      "Effect": "Deny",
+      "Action": "s3:PutBucketPolicy",
+      "Resource": "*",
+      "Condition": {
+        "Bool": {
+          "s3:PublicAccessBlocked": "false"
+        }
+      }
+    },
+    {
+      "Sid": "DenyPublicSecurityGroupIngress",
+      "Effect": "Deny",
+      "Action": [
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:RevokeSecurityGroupIngress"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "ec2:cidr": "0.0.0.0/0"
+        }
+      }
+    },
+    {
+      "Sid": "DenyPublicIpOnEC2",
+      "Effect": "Deny",
+      "Action": "ec2:RunInstances",
+      "Resource": "arn:aws:ec2:*:*:network-interface/*",
+      "Condition": {
+        "Bool": {
+          "ec2:AssociatePublicIpAddress": "true"
+        }
+      }
+    }
+  ]
+}

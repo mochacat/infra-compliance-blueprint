@@ -1,0 +1,24 @@
+# Copy to terraform.tfvars and fill in your values.
+# terraform.tfvars is gitignored.
+
+region = "us-east-1"
+org_name = "Anestoa"
+
+# The email address of the management account. Must be the account that will
+# become the AWS Organization root.
+org_email = "aws-root@example.com"
+
+# Domain used to generate member-account email aliases.
+# Each account gets <prefix><name>@<domain>, e.g. aws-security@example.com.
+# You must control these aliases before uncommenting accounts.tf.
+account_email_domain = "example.com"
+account_email_prefix = "aws-"
+
+# Regions approved for workloads. Enforced by the RestrictRegions SCP.
+allowed_regions = ["us-east-1", "us-west-2", "eu-west-1", "eu-central-1"]
+
+audit_log_bucket_name = "anestoa-audit-logs"
+
+# Optional: ARN of an existing IAM Identity Center instance.
+# aws sso-admin list-instances --query 'Instances[0].InstanceArn'
+sso_instance_arn = null

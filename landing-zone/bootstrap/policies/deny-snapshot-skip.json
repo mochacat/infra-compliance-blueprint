@@ -1,0 +1,20 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenySkipFinalSnapshot",
+      "Effect": "Deny",
+      "Action": [
+        "rds:DeleteDBInstance",
+        "docdb:DeleteDBInstance",
+        "elasticache:DeleteReplicationGroup"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "Bool": {
+          "rds:SkipFinalSnapshot": "true"
+        }
+      }
+    }
+  ]
+}

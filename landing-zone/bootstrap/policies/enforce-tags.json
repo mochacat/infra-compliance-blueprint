@@ -1,0 +1,58 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "RequireMandatoryTagsOnCreate",
+      "Effect": "Deny",
+      "Action": [
+        "ec2:CreateVolume",
+        "ec2:RunInstances",
+        "ec2:CreateVpc",
+        "ec2:CreateSubnet",
+        "ec2:CreateSecurityGroup",
+        "rds:CreateDBInstance",
+        "rds:CreateDBCluster",
+        "elasticache:CreateCacheCluster",
+        "elasticache:CreateReplicationGroup",
+        "opensearch:CreateDomain",
+        "sagemaker:CreateDomain",
+        "sagemaker:CreateNotebookInstance",
+        "sagemaker:CreateEndpoint",
+        "lambda:CreateFunction",
+        "sns:CreateTopic",
+        "sqs:CreateQueue",
+        "logs:CreateLogGroup",
+        "dynamodb:CreateTable",
+        "ecs:CreateCluster",
+        "ecs:CreateService",
+        "elasticfilesystem:CreateFileSystem",
+        "redshift:CreateCluster",
+        "bedrock:CreateModelInvocationJob",
+        "kafka:CreateCluster"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "ForAnyValue:Null": {
+          "aws:RequestTag/Environment": "true",
+          "aws:RequestTag/CostCenter": "true",
+          "aws:RequestTag/DataClassification": "true",
+          "aws:RequestTag/ManagedBy": "true"
+        }
+      }
+    },
+    {
+      "Sid": "RequireMandatoryTagsOnTagOperation",
+      "Effect": "Deny",
+      "Action": "ec2:CreateTags",
+      "Resource": "*",
+      "Condition": {
+        "ForAnyValue:Null": {
+          "aws:RequestTag/Environment": "true",
+          "aws:RequestTag/CostCenter": "true",
+          "aws:RequestTag/DataClassification": "true",
+          "aws:RequestTag/ManagedBy": "true"
+        }
+      }
+    }
+  ]
+}

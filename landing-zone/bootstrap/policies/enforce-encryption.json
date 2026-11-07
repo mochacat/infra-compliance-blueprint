@@ -1,0 +1,82 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyCreateBucketWithoutEncryption",
+      "Effect": "Deny",
+      "Action": "s3:CreateBucket",
+      "Resource": "*",
+      "Condition": {
+        "Null": {
+          "s3:x-amz-server-side-encryption": true
+        }
+      }
+    },
+    {
+      "Sid": "DenyCreateVolumeWithoutEncryption",
+      "Effect": "Deny",
+      "Action": "ec2:CreateVolume",
+      "Resource": "*",
+      "Condition": {
+        "Null": {
+          "ec2:Encrypted": true
+        }
+      }
+    },
+    {
+      "Sid": "DenyCreateInstanceWithoutEncryptedVolumes",
+      "Effect": "Deny",
+      "Action": "ec2:RunInstances",
+      "Resource": "arn:aws:ec2:*:*:volume/*",
+      "Condition": {
+        "Null": {
+          "ec2:Encrypted": true
+        }
+      }
+    },
+    {
+      "Sid": "DenyUnencryptedRDS",
+      "Effect": "Deny",
+      "Action": "rds:CreateDBInstance",
+      "Resource": "*",
+      "Condition": {
+        "Bool": {
+          "rds:StorageEncrypted": "false"
+        }
+      }
+    },
+    {
+      "Sid": "DenyRDSWithoutEncryptionArgument",
+      "Effect": "Deny",
+      "Action": "rds:CreateDBInstance",
+      "Resource": "*",
+      "Condition": {
+        "Null": {
+          "rds:StorageEncrypted": true
+        }
+      }
+    },
+    {
+      "Sid": "DenyUnencryptedRedshift",
+      "Effect": "Deny",
+      "Action": "redshift:CreateCluster",
+      "Resource": "*",
+      "Condition": {
+        "Null": {
+          "redshift:Encrypted": true
+        }
+      }
+    },
+    {
+      "Sid": "DenyUnencryptedEFS",
+      "Effect": "Deny",
+      "Action": "elasticfilesystem:CreateFileSystem",
+      "Resource": "*",
+      "Condition": {
+        "Null": {
+          "elasticfilesystem:Encrypted": true
+        }
+      }
+    }
+  ]
+}

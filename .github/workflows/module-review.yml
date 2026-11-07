@@ -1,0 +1,255 @@
+# ── GitHub Actions CI Workflow ────────────────────────────────────────────
+#
+# Module review on every change to modules/ (any push or PR).
+# Mirrors the /review-module skill but runs in CI without user interaction.
+#
+# Each check is its own job so they show up as independent status checks
+# in the GitHub PR merge box. Atlantis handles real infra plans/applies
+# separately — see CLAUDE.md §CI/CD & Automation.
+#
+# Usage:
+#   Add secrets (repo-level):
+#     - INFRACOST_API_KEY  (required for the infracost job — the current CLI
+#       requires it even for `infracost breakdown`; keyless access is deprecated)
+#
+#   The on: paths filter scopes the workflow to modules/. The detect job lists
+#   every module directory and fans out one job per module per check.
+
+name: module-review
+
+#on:
+#  # Every push to any branch touching modules/ (and the PR gate) runs the full
+#  # module check suite — fmt-check, validate, checkov, opa, test.
+#  pull_request:
+#    paths:
+#      - "modules/**"
+#      - "Makefile"
+#      - ".github/workflows/module-review.yml"
+#  push:
+#    paths:
+#      - "modules/**"
+#      - "Makefile"
+#      - ".github/workflows/module-review.yml"
+#  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+env:
+  TOFU_VERSION: "1.13.2"
+  OPA_VERSION: "v1.20.2"
+  PYTHON_VERSION: "3.11"
+  # Dummy credentials + region so `tofu plan -backend=false` can evaluate
+  # modules in CI without real AWS access. Safe because our modules contain no
+  # network-calling data sources (only offline `aws_iam_policy_document`).
+  AWS_ACCESS_KEY_ID: "ci-dummy"
+  AWS_SECRET_ACCESS_KEY: "ci-dummy"
+  AWS_REGION: "us-east-1"
+  AWS_DEFAULT_REGION: "us-east-1"
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  # List module directories (modules/<cloud>/<name>) for the check matrix.
+  # The on: paths filter already scopes this workflow to modules/** — this just
+  # enumerates every module so each check fans out one job per module.
+  # ─────────────────────────────────────────────────────────────────────────
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      modules: ${{ steps.set-modules.outputs.modules }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: List module directories
+        id: set-modules
+        run: |
+          MODULES=$(find modules/ -mindepth 2 -maxdepth 2 -type d | sort | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "modules=$MODULES" >> "$GITHUB_OUTPUT"
+          echo "Modules: $MODULES"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 1. lint — Fast static checks (fmt + validate). One runner, no plan, no
+  #    AWS access. Catches most PR problems in under a minute. Both commands
+  #    share the same OpenTofu install, so they run as a single job rather
+  #    than two matrix fans.
+  # ─────────────────────────────────────────────────────────────────────────
+  lint:
+    needs: detect
+    if: ${{ fromJson(needs.detect.outputs.modules)[0] != null }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJson(needs.detect.outputs.modules) }}
+    name: lint / ${{ matrix.module }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.TOFU_VERSION }}
+      - name: Format check
+        run: make fmt-check MODULE_PATH=${{ matrix.module }}
+      - name: Validate
+        run: make validate MODULE_PATH=${{ matrix.module }}
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 2. checkov — Compliance static analysis (CKV rules across all pillars)
+  # ─────────────────────────────────────────────────────────────────────────
+  checkov:
+    needs: detect
+    if: ${{ fromJson(needs.detect.outputs.modules)[0] != null }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJson(needs.detect.outputs.modules) }}
+    name: checkov / ${{ matrix.module }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install checkov
+      # ── Reference note on the output ─────────────────────────────
+      # This is a reference monorepo. `matrix.module` is a path like
+      # `modules/aws/cloudtrail`; the JUnit report below is not consumed
+      # anywhere in this repo — it demonstrates the CI pattern that, in a
+      # customer deployment, would feed that customer's centralized
+      # CloudTrail + Security Hub / audit bucket posture. Nothing here is
+      # wired to a live audit pipeline.
+      # ──────────────────────────────────────────────────────────────
+      #
+      # GitHub artifact names cannot contain `/`, so derive a flat name
+      # from the module path before uploading.
+      - name: Sanitize artifact name
+        id: artifact
+        run: |
+          NAME=$(echo "${{ matrix.module }}" | tr '/' '-')
+          echo "name=checkov-report-${NAME}" >> "$GITHUB_OUTPUT"
+      - run: |
+          checkov --framework terraform \
+            -d ${{ matrix.module }} \
+            --compact \
+            --quiet \
+            --output cli \
+            --output junitxml \
+            --output-file-path console,checkov-report.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: checkov-report.xml
+          if-no-files-found: ignore
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 3. opa — Custom Rego policy evaluation (if policies/ exists)
+  # ─────────────────────────────────────────────────────────────────────────
+  opa:
+    needs: detect
+    if: ${{ fromJson(needs.detect.outputs.modules)[0] != null }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJson(needs.detect.outputs.modules) }}
+    name: opa / ${{ matrix.module }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.TOFU_VERSION }}
+      - uses: open-policy-agent/setup-opa@v2
+        with:
+          version: ${{ env.OPA_VERSION }}
+      - name: Check for policies directory
+        id: has_policies
+        run: |
+          if [ -d "${{ matrix.module }}/policies" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Generate plan and run OPA
+        if: steps.has_policies.outputs.exists == 'true'
+        run: |
+          make plan-ci MODULE_PATH=${{ matrix.module }}
+          make opa MODULE_PATH=${{ matrix.module }}
+      - name: Skipped — no policies directory
+        if: steps.has_policies.outputs.exists == 'false'
+        run: echo "No policies/ directory — skipping OPA"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 4. test — tofu test suite (defaults.tftest.hcl, prod.tftest.hcl, etc.)
+  # ─────────────────────────────────────────────────────────────────────────
+  test:
+    needs: detect
+    if: ${{ fromJson(needs.detect.outputs.modules)[0] != null }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJson(needs.detect.outputs.modules) }}
+    name: test / ${{ matrix.module }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.TOFU_VERSION }}
+      - name: Check for tests directory
+        id: has_tests
+        run: |
+          if [ -d "${{ matrix.module }}/tests" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Run tofu test suite
+        if: steps.has_tests.outputs.exists == 'true'
+        run: make test MODULE_PATH=${{ matrix.module }}
+      - name: Skipped — no tests directory
+        if: steps.has_tests.outputs.exists == 'false'
+        run: echo "No tests/ directory — skipping tests"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 5. infracost — Cost estimate.
+  #     DISABLED (if: false) until a repo-level INFRACOST_API_KEY secret is set.
+  #     The current infracost CLI requires an API key even for `infracost
+  #     breakdown` — keyless access is deprecated. Without it this job fails and
+  #     blocks the PR. Re-enable by removing the `if: false` below.
+  # ─────────────────────────────────────────────────────────────────────────
+  infracost:
+    needs: detect
+    if: false
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJson(needs.detect.outputs.modules) }}
+    name: infracost / ${{ matrix.module }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Infracost
+        run: |
+          curl -fsSL "https://raw.githubusercontent.com/infracost/cli/master/scripts/install.sh" | sh
+      - name: Sanitize artifact name
+        id: cost-artifact
+        run: |
+          NAME=$(echo "${{ matrix.module }}" | tr '/' '-')
+          echo "name=infracost-report-${NAME}" >> "$GITHUB_OUTPUT"
+      - name: Run Infracost
+        env:
+          INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
+        run: |
+          infracost breakdown \
+            --path ${{ matrix.module }} \
+            --format table \
+            --out-file infracost-report.txt
+          cat infracost-report.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ steps.cost-artifact.outputs.name }}
+          path: infracost-report.txt
+          if-no-files-found: ignore

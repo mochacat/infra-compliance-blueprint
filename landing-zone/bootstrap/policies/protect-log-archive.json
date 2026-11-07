@@ -1,0 +1,40 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyBucketPolicyChanges",
+      "Effect": "Deny",
+      "Action": [
+        "s3:PutBucketPolicy",
+        "s3:DeleteBucketPolicy"
+      ],
+      "Resource": "arn:aws:s3:::*audit*",
+      "Condition": {
+        "StringNotLike": {
+          "aws:PrincipalARN": "arn:aws:iam::*:role/*log-archive*"
+        }
+      }
+    },
+    {
+      "Sid": "DenyObjectLockConfiguration",
+      "Effect": "Deny",
+      "Action": [
+        "s3:PutBucketObjectLockConfiguration",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention"
+      ],
+      "Resource": "arn:aws:s3:::*audit*"
+    },
+    {
+      "Sid": "DenyVersioningSuspension",
+      "Effect": "Deny",
+      "Action": "s3:PutBucketVersioning",
+      "Resource": "arn:aws:s3:::*audit*",
+      "Condition": {
+        "StringEquals": {
+          "s3:VersioningState": "Suspended"
+        }
+      }
+    }
+  ]
+}

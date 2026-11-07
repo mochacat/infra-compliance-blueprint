@@ -1,0 +1,32 @@
+# OpenTofu / Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+plan.json
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Keep the lock file — it pins provider versions
+!/.terraform.lock.hcl
+
+# Secrets — never commit
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+*.pem
+*.key
+
+.codegraph
+
+# Claude for now until I develop the skills
+.claude
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp

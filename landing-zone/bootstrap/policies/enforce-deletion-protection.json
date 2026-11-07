@@ -1,0 +1,27 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyDisableRDSDeletionProtection",
+      "Effect": "Deny",
+      "Action": "rds:ModifyDBInstance",
+      "Resource": "*",
+      "Condition": {
+        "Bool": {
+          "rds:DeletionProtection": "false"
+        }
+      }
+    },
+    {
+      "Sid": "DenyDisableElastiCacheDeletionProtection",
+      "Effect": "Deny",
+      "Action": "elasticache:ModifyReplicationGroup",
+      "Resource": "*",
+      "Condition": {
+        "Bool": {
+          "elasticache:DeletionProtection": "false"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyNonApprovedRegions",
+      "Effect": "Deny",
+      "NotAction": [
+        "iam:*",
+        "route53:*",
+        "sts:*",
+        "organizations:*",
+        "cloudfront:*",
+        "support:*",
+        "account:*",
+        "billing:*",
+        "budgets:*",
+        "cur:*",
+        "aws-portal:*",
+        "ce:*",
+        "tax:*",
+        "s3:GetBucketLocation",
+        "s3:ListAllMyBuckets",
+        "wafv2:*"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:RequestedRegion": [
+            "us-east-1",
+            "us-west-2",
+            "eu-west-1",
+            "eu-central-1"
+          ]
+        }
+      }
+    }
+  ]
+}
