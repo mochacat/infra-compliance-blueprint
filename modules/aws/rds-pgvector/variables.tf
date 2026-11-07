@@ -168,21 +168,11 @@ variable "data_residency" {
   default  = {}
 }
 
-# ── Database credentials (Secrets Manager, caller-provided) ─────────────────
-variable "master_password" {
-  description = <<-EOF
-    Master user password for the Aurora cluster. In production, source this from
-    AWS Secrets Manager via a data source in the calling terraservice — never
-    commit a real password. The module does not create the secret. If null,
-    the caller is expected to set the password out-of-band (e.g. a post-apply
-    Secrets Manager rotation) before the cluster is used.
-  EOF
-  type        = string
-  nullable    = true
-  default     = null
-  sensitive   = true
-}
-
+# ── Database credentials — RDS manages the master password in Secrets Manager ─
+# The cluster uses manage_master_user_password = true, so RDS auto-generates the
+# password, stores it in Secrets Manager, and rotates it automatically. Terraform
+# never sees the password value. The secret ARN is available via the
+# master_user_secret output.
 variable "master_username" {
   description = "Master username for the Aurora cluster."
   type        = string
@@ -192,16 +182,14 @@ variable "master_username" {
 
 variable "secret_arn" {
   description = <<-EOF
-    ARN of the Secrets Manager secret holding the DB credentials, used by the
-    RDS Proxy auth (auth_scheme = SECRETS). In production this is the managed
-    secret the cluster's credentials live in. The module does not create it.
+    ARN of the Secrets Manager secret for RDS Proxy auth (auth_scheme = SECRETS).
+    When null (default), the proxy uses the RDS-managed secret created by
+    manage_master_user_password — the module outputs its ARN as
+    master_user_secret_arn for the caller to read.
   EOF
   type        = string
-  nullable    = false
-  validation {
-    condition     = can(regex("^arn:aws:secretsmanager:", var.secret_arn))
-    error_message = "Must be a valid Secrets Manager ARN."
-  }
+  nullable    = true
+  default     = null
 }
 
 # ── Pillar 10 — FinOps & Cost Controls ──────────────────────────────────────────────────────

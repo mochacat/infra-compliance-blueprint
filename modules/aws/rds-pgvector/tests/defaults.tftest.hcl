@@ -16,8 +16,7 @@ variables {
   name                = "sample-pgvector"
   region              = "us-east-1"
   kms_key_arn         = "arn:aws:kms:us-east-1:123456789012:key/0a1b2c3d4e5f67890"
-  secret_arn          = "arn:aws:secretsmanager:us-east-1:123456789012:secret:app-db-creds"
-  data_classification = "internal"
+    data_classification = "internal"
   network = {
     vpc_id       = "vpc-0a1b2c3d4e5f67890"
     subnet_ids   = ["subnet-0a1b2c3d4e5f67890", "subnet-0a1b2c3d4e5f67891"]
@@ -97,6 +96,18 @@ run "test_compliance_controls" {
     condition     = output.compliance_controls.multi_az == true
     error_message = "multi_az must be true (Aurora is multi-AZ)."
   }
+  assert {
+    condition     = output.compliance_controls.private_network == true
+    error_message = "private_network must be true."
+  }
+  assert {
+    condition     = output.compliance_controls.proxy_enabled == true
+    error_message = "proxy_enabled must be true."
+  }
+  assert {
+    condition     = output.compliance_controls.require_tls == true
+    error_message = "require_tls must be true."
+  }
 }
 
 # ── Cross-region DR (Pillar 6 — Backup, DR & Deletion Protection) — opt-in global cluster ───────────────────────
@@ -135,5 +146,18 @@ run "test_no_dr_by_default" {
   assert {
     condition     = length(aws_rds_global_cluster.this) == 0
     error_message = "Cross-region DR must be opt-in; no global cluster by default."
+  }
+}
+
+run "test_manage_master_password" {
+  command = plan
+
+  assert {
+    condition     = aws_rds_cluster.this.manage_master_user_password == true
+    error_message = "RDS must manage the master user password (manage_master_user_password = true)."
+  }
+  assert {
+    condition     = aws_rds_cluster.this.master_user_secret_kms_key_id == var.kms_key_arn
+    error_message = "Master user secret must be encrypted with the caller-provided KMS key."
   }
 }

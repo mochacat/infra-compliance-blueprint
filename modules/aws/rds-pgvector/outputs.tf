@@ -18,6 +18,11 @@ output "cluster_reader_endpoint" {
   value       = aws_rds_cluster.this.reader_endpoint
 }
 
+output "master_user_secret_arn" {
+  description = "ARN of the RDS-managed Secrets Manager secret for the master user."
+  value       = aws_rds_cluster.this.master_user_secret[0].secret_arn
+}
+
 output "proxy_endpoint" {
   description = "RDS Proxy endpoint for connection pooling."
   value       = aws_db_proxy.this.endpoint

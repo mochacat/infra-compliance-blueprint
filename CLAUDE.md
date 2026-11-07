@@ -646,6 +646,58 @@ Run on every PR / plan:
 - No static credentials. OIDC federation only.
 - Secrets from Vault / AWS Secrets Manager / GCP Secret Manager via data sources — never in state.
 
+### Cross-Layer Communication (SSM Only)
+
+Terraservices in the same business unit share outputs via **SSM Parameter Store**, never via
+`terraform_remote_state` or hardcoded variables. This decouples layer state files and allows
+layers to be applied independently.
+
+**Publishing pattern** — each layer writes its outputs as SSM parameters on apply:
+```hcl
+# iam/outputs.tf — publishes role ARNs and other outputs
+resource "aws_ssm_parameter" "kms_key_arn" {
+  name  = "/environments/${var.environment}/platform/kms-key-arn"
+  type  = "String"
+  value = local.app_kms_key_arn
+  key_id = var.kms_key_arn  # encrypt with the key
+}
+
+# network/outputs.tf — publishes network coordinates
+resource "aws_ssm_parameter" "vpc_id" {
+  name  = "/environments/${var.environment}/platform/vpc-id"
+  type  = "String"
+  value = module.vpc.vpc_id
+}
+```
+
+**Consuming pattern** — downstream layers read from SSM via data sources:
+```hcl
+# data/data.tf
+data "aws_ssm_parameter" "kms_key_arn" {
+  name = "/environments/${var.environment}/platform/kms-key-arn"
+}
+
+# data/variables.tf — no need for vpc_id, subnet_ids, etc. as variables
+# data/main.tf
+  kms_key_arn = data.aws_ssm_parameter.kms_key_arn.value
+```
+
+**SSM naming convention:**
+```
+/environments/<environment>/<business-unit>/<key>
+```
+
+Key names are kebab-case (e.g., `vpc-id`, `kms-key-arn`, `ecs-task-exec-role-arn`,
+`sagemaker-exec-role-name`, `data-subnet-ids`, `app-subnet-ids`, `default-sg-id`).
+
+| Must | Must not |
+|---|---|
+| Write every output another layer needs as an SSM parameter | Use `terraform_remote_state` for cross-layer references |
+| Use `key_id` (KMS CMK) on every SSM parameter (Pillar 1) | Hardcode ARNs, IDs, or endpoints in variables |
+| Group by environment and business unit in the SSM path | Use account-local parameter names for cross-layer values |
+| Remove unused SSM parameters when a layer is refactored | Leave orphaned parameters behind |
+| Use `type = "StringList"` for list values (comma-separated) | Use `type = "String"` for multi-value outputs |
+
 ### Versioning & Composition
 
 - Semantic versioning (`vMAJOR.MINOR.PATCH`). Breaking changes → MAJOR.
