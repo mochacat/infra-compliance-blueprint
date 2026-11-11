@@ -56,7 +56,7 @@ Security posture is **invariant** across environments — only cost/sizing varie
 
 ```
 1. (this) infrastructure/network-hub/transit-gateway/   ← creates TG + RAM share
-2. infrastructure/network-hub/endpoints/                ← shared VPC endpoints
+2. infrastructure/network-hub/network/                  ← hub VPC + TGW attachment + VPC endpoints
 3. <env>/<bu>/iam/
 4. <env>/<bu>/network/                                  ← accepts RAM share, looks up TG locally, attaches
 5. <env>/<bu>/data/

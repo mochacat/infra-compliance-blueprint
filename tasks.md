@@ -74,7 +74,7 @@ Docs: `landing-zone/README.md`, `landing-zone/reference/ARCHITECTURE.md`, `SCP-D
 
 ### 3.1 Infra-Control-Plane
 - [x] `network-hub/transit-gateway/` — hub TG + RAM share + SSM pointer. 8 tests pass, Checkov/OPA clean.
-- [ ] `network-hub/endpoints/` — shared VPC endpoints (S3/DynamoDB gateway + interface), cross-account exposure design pending
+- [x] `network-hub/network/` — hub VPC (RFC-6598), TGW attachment, VPC endpoints, route tables, SSM publication. Replaces `endpoints/`. 6 defaults pass + 3 compliance gates verified.
 - [ ] `shared-tools/compute/`
 
 ### 3.2 Development / Platform — FIRST REFERENCE WORKLOAD (this PR)

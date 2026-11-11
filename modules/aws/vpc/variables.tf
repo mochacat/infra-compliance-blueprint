@@ -27,16 +27,19 @@ variable "name" {
 }
 
 variable "cidr_block" {
-  description = "VPC CIDR block. Must be RFC-1918 private range, no 0.0.0.0/0, no host bits set."
+  description = "VPC CIDR block. Must be RFC-1918 or RFC-6598 private range, no 0.0.0.0/0, no host bits set."
   type        = string
   nullable    = false
   validation {
     condition = can(cidrhost(var.cidr_block, 0)) && (
+      # RFC-1918: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
       can(regex("^10\\.", cidrhost(var.cidr_block, 0))) ||
       can(regex("^172\\.(1[6-9]|2[0-9]|3[01])\\.", cidrhost(var.cidr_block, 0))) ||
-      can(regex("^192\\.168\\.", cidrhost(var.cidr_block, 0)))
+      can(regex("^192\\.168\\.", cidrhost(var.cidr_block, 0))) ||
+      # RFC-6598 (CG-NAT): 100.64.0.0/10
+      can(regex("^100\\.(6[4-9]|[7-9][0-9])\\.", cidrhost(var.cidr_block, 0)))
     ) && contains(range(16, 29), parseint(split("/", var.cidr_block)[1], 10))
-    error_message = "CIDR must be a valid RFC-1918 private range with prefix /16-/28 (Pillar 3 — Network Security & Isolation)."
+    error_message = "CIDR must be a valid RFC-1918 or RFC-6598 (CG-NAT) private range with prefix /16-/28 (Pillar 3 — Network Security & Isolation)."
   }
 }
 

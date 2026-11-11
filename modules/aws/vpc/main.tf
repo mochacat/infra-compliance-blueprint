@@ -30,16 +30,17 @@ resource "aws_vpc" "this" {
       error_message = local.overlap_message
     }
 
-    # CIDR validation: must be RFC-1918 private range (/16–/28, matching the
-    # variable validation in variables.tf). This rejects 0.0.0.0/0 and any
-    # public / non-routable garbage that would never work in a VPC.
+    # CIDR validation: must be RFC-1918 or RFC-6598 private range (/16–/28,
+    # matching the variable validation in variables.tf). This rejects 0.0.0.0/0
+    # and any public / non-routable garbage that would never work in a VPC.
     precondition {
       condition = can(cidrhost(var.cidr_block, 0)) && (
         can(regex("^10\\.", cidrhost(var.cidr_block, 0))) ||
         can(regex("^172\\.(1[6-9]|2[0-9]|3[01])\\.", cidrhost(var.cidr_block, 0))) ||
-        can(regex("^192\\.168\\.", cidrhost(var.cidr_block, 0)))
+        can(regex("^192\\.168\\.", cidrhost(var.cidr_block, 0))) ||
+        can(regex("^100\\.(6[4-9]|[7-9][0-9])\\.", cidrhost(var.cidr_block, 0)))
       ) && contains(range(16, 29), parseint(split("/", var.cidr_block)[1], 10))
-      error_message = "cidr_block must be a valid RFC-1918 private range with prefix /16-/28 (Pillar 3 — Network Security & Isolation)."
+      error_message = "cidr_block must be a valid RFC-1918 or RFC-6598 (CG-NAT) private range with prefix /16-/28 (Pillar 3 — Network Security & Isolation)."
     }
   }
 }
