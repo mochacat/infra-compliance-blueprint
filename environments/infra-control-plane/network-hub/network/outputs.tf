@@ -87,6 +87,7 @@ resource "aws_ssm_parameter" "vpc_id" {
   description = "Hub VPC ID."
   type        = "SecureString"
   value       = module.vpc.vpc_id
+  key_id      = var.kms_key_arn
   tags        = local.base_tags
 }
 
@@ -95,22 +96,25 @@ resource "aws_ssm_parameter" "vpc_cidr" {
   description = "Hub VPC CIDR block."
   type        = "SecureString"
   value       = var.vpc_cidr
+  key_id      = var.kms_key_arn
   tags        = local.base_tags
 }
 
 resource "aws_ssm_parameter" "app_subnet_ids" {
   name        = "${local.ssm_base_path}/app-subnet-ids"
   description = "Hub VPC app-tier subnet IDs."
-  type        = "StringList"
+  type        = "SecureString"
   value       = join(",", local.flat_app_subnet_ids)
+  key_id      = var.kms_key_arn
   tags        = local.base_tags
 }
 
 resource "aws_ssm_parameter" "data_subnet_ids" {
   name        = "${local.ssm_base_path}/data-subnet-ids"
   description = "Hub VPC data-tier subnet IDs."
-  type        = "StringList"
+  type        = "SecureString"
   value       = join(",", local.flat_data_subnet_ids)
+  key_id      = var.kms_key_arn
   tags        = local.base_tags
 }
 
@@ -119,5 +123,6 @@ resource "aws_ssm_parameter" "default_sg_id" {
   description = "Hub VPC default security group ID."
   type        = "SecureString"
   value       = module.vpc.default_security_group_id
+  key_id      = var.kms_key_arn
   tags        = local.base_tags
 }

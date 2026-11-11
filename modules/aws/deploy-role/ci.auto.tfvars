@@ -5,6 +5,6 @@ tags = {
   ManagedBy   = "tofu"
   Environment = "dev"
 }
-allowed_regions    = ["us-east-1", "us-west-2"]
+allowed_regions     = ["us-east-1", "us-west-2"]
 data_classification = "internal"
-default_tags       = {}
+default_tags        = {}

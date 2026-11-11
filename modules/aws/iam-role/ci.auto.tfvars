@@ -23,5 +23,5 @@ cost_controls = {
   cost_center  = "sec"
   project_code = "demo"
 }
-allowed_regions    = ["us-east-1", "us-west-2"]
-default_tags       = {}
+allowed_regions = ["us-east-1", "us-west-2"]
+default_tags    = {}

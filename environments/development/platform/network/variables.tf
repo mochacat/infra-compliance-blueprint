@@ -37,6 +37,13 @@ variable "allowed_regions" {
   default     = ["us-east-1", "us-west-2", "eu-west-1", "eu-central-1"]
 }
 
+# ── Pillar 1 — Encryption (KMS CMK for SSM parameter encryption) ──────────────
+variable "kms_key_arn" {
+  description = "CMK ARN for encrypting SSM parameters published by this layer."
+  type        = string
+  nullable    = false
+}
+
 # ── Pillar 7 — Data Residency & Sovereignty ───────────────────────────────────
 # ── Business unit (for SSM path and naming) ──────────────────────────────────
 variable "business_unit" {

@@ -5,6 +5,7 @@ run "plan_defaults" {
 
   variables {
     business_unit       = "research"
+    kms_key_arn         = "arn:aws:kms:us-east-1:123456789012:key/mock-0000-0000-0000-000000000000"
     environment         = "dev"
     region              = "us-east-1"
     data_classification = "internal"

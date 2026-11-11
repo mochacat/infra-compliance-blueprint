@@ -11,5 +11,5 @@ network = {
 iam = {
   execution_role_name = "ml-execution-role"
 }
-allowed_regions    = ["us-east-1", "us-west-2"]
-default_tags       = {}
+allowed_regions = ["us-east-1", "us-west-2"]
+default_tags    = {}

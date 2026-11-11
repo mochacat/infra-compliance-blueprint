@@ -40,6 +40,15 @@ variable "region" {
   }
 }
 
+# ── Pillar 1 — Encryption (KMS CMK for SSM parameter encryption) ──────────────
+variable "kms_key_arn" {
+  description = "CMK ARN for encrypting SSM parameters published by this layer."
+  type        = string
+  nullable    = false
+}
+
+
+
 # ── Pillar 7 — Data Residency & Sovereignty ───────────────────────────────────
 variable "data_classification" {
   description = "Data classification: internal, pii, phi, financial, cardholder."

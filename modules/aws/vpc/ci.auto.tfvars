@@ -20,5 +20,5 @@ subnets = {
     cidrs              = ["10.0.3.0/24", "10.0.4.0/24"]
   }
 }
-allowed_regions    = ["us-east-1", "us-west-2"]
-default_tags       = {}
+allowed_regions = ["us-east-1", "us-west-2"]
+default_tags    = {}

@@ -8,5 +8,5 @@ network = {
   subnet_ids         = ["subnet-0a1b2c3d4e5f67890", "subnet-0a1b2c3d4e5f67891"]
   security_group_ids = ["sg-0a1b2c3d4e5f67890"]
 }
-allowed_regions    = ["us-east-1", "us-west-2"]
-default_tags       = {}
+allowed_regions = ["us-east-1", "us-west-2"]
+default_tags    = {}

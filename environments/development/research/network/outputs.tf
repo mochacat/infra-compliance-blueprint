@@ -69,22 +69,25 @@ resource "aws_ssm_parameter" "vpc_id" {
   description = "VPC ID for ${var.environment}/research"
   type        = "SecureString"
   value       = module.vpc.vpc_id
+  key_id      = var.kms_key_arn
   tags        = local.base_tags
 }
 
 resource "aws_ssm_parameter" "app_subnet_ids" {
   name        = "/environments/${var.environment}/${var.business_unit}/app-subnet-ids"
   description = "App-tier subnet IDs for ${var.environment}/research"
-  type        = "StringList"
+  type        = "SecureString"
   value       = join(",", local.flat_app_subnet_ids)
+  key_id      = var.kms_key_arn
   tags        = local.base_tags
 }
 
 resource "aws_ssm_parameter" "data_subnet_ids" {
   name        = "/environments/${var.environment}/${var.business_unit}/data-subnet-ids"
   description = "Data-tier subnet IDs for ${var.environment}/research"
-  type        = "StringList"
+  type        = "SecureString"
   value       = join(",", local.flat_data_subnet_ids)
+  key_id      = var.kms_key_arn
   tags        = local.base_tags
 }
 
@@ -93,5 +96,6 @@ resource "aws_ssm_parameter" "default_sg_id" {
   description = "Default security group ID for ${var.environment}/research"
   type        = "SecureString"
   value       = module.vpc.default_security_group_id
+  key_id      = var.kms_key_arn
   tags        = local.base_tags
 }

@@ -11,5 +11,5 @@ network = {
 iam = {
   principal_arns = ["arn:aws:iam::123456789012:role/app-service"]
 }
-allowed_regions    = ["us-east-1", "us-west-2"]
-default_tags       = {}
+allowed_regions = ["us-east-1", "us-west-2"]
+default_tags    = {}
