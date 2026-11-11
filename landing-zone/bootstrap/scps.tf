@@ -70,6 +70,13 @@ resource "aws_organizations_policy" "enforce_tags" {
   content     = file("${path.module}/policies/enforce-tags.json")
 }
 
+resource "aws_organizations_policy" "protect_ssm_parameters" {
+  name        = "ProtectSSMParameters"
+  description = "Restricts SSM parameter write/delete to the Atlantis execution role only. Prevents tampering with the cross-layer SSM contract that downstream layers depend on (Pillar 6)."
+  type        = "SERVICE_CONTROL_POLICY"
+  content     = file("${path.module}/policies/protect-ssm-parameters.json")
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Attachments
 #
@@ -101,6 +108,11 @@ resource "aws_organizations_policy_attachment" "root_deny_cloudtrail_disable" {
 
 resource "aws_organizations_policy_attachment" "root_enforce_tags" {
   policy_id = aws_organizations_policy.enforce_tags.id
+  target_id = aws_organizations_organization.this.roots[0].id
+}
+
+resource "aws_organizations_policy_attachment" "root_protect_ssm_parameters" {
+  policy_id = aws_organizations_policy.protect_ssm_parameters.id
   target_id = aws_organizations_organization.this.roots[0].id
 }
 

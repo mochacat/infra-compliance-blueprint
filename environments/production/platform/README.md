@@ -26,32 +26,33 @@ nothing is broken — `network/` simply hasn't been created yet. Each layer is a
 
 ```
 tofu apply   environments/production/platform/iam/      # creates roles
-tofu apply   environments/production/platform/network/   # creates VPC, reads role ARNs from iam/ state
-tofu apply   environments/production/platform/data/      # creates RDS, reads subnet IDs from network/ state
-tofu apply   environments/production/platform/compute/   # creates ECS, reads from iam/ + network/ + data/
-tofu apply   environments/production/platform/ai/        # creates SageMaker, reads from iam/ + network/ + data/
+tofu apply   environments/production/platform/network/   # creates VPC, reads role ARNs from SSM (published by iam/)
+tofu apply   environments/production/platform/data/      # creates RDS, reads subnet IDs from SSM (published by network/)
+tofu apply   environments/production/platform/compute/   # creates ECS, reads from SSM (published by iam/ + network/ + data/)
+tofu apply   environments/production/platform/ai/        # creates SageMaker, reads from SSM (published by iam/ + network/ + data/)
 ```
 
 ### Blast radius analysis
 
 | What changed | Must re-apply | Blast radius | Why it's contained |
 |---|---|---|---|
-| **iam/** — add a policy to an existing role | `iam/` only | Low | Downstream layers read the role ARN, not the policy content. The new permissions are picked up on their next plan refresh. |
-| **iam/** — add a new role | `iam/` only | None | No downstream layer references it until you explicitly add a `terraform_remote_state` data source for it. |
-| **iam/** — delete a role | `iam/` + downstream layers | **Controlled by Atlantis** | Atlantis will show downstream layers failing validation because the remote state output is gone. This is caught at plan time, never at apply time. A PR that deletes a role should be reviewed, planned, and applied alongside any downstream cleanup. |
+| **iam/** — add a policy to an existing role | `iam/` only | Low | Downstream layers read the role ARN from SSM, not the policy content. The new permissions are picked up on their next plan refresh. |
+| **iam/** — add a new role | `iam/` only | None | No downstream layer references it until you explicitly add an SSM data source for it. |
+| **iam/** — delete a role | `iam/` + downstream layers | **Controlled by Atlantis** | Atlantis will show downstream layers failing validation because the SSM parameter is gone (or its value references a deleted ARN). This is caught at plan time, never at apply time. Check `ssm-contract.yaml` before removing any published SSM parameter. A PR that deletes a role should be reviewed, planned, and applied alongside any downstream cleanup. |
 | **network/** — add a new subnet | `network/` only | Low | Data/compute/ai read subnet lists — new subnets appear in their next plan as additions, not breaks. |
 | **network/** — change CIDR | `network/` + review downstream | Medium | Downstream layers reference the VPC and subnet IDs, not CIDRs. The IDs don't change on a CIDR modification. VPC CIDR changes require recreation — `prevent_destroy` is not set on the VPC but the lifecycle precondition prevents CIDR overlap. |
-| **network/** — delete VPC | terraform destroy chain | **Full blast, by design** | You don't delete a VPC with resources in it. Downstream layers' `terraform_remote_state` will break — but this is a deliberate decommissioning action, not a routine change. |
+| **network/** — delete VPC | terraform destroy chain | **Full blast, by design** | You don't delete a VPC with resources in it. Downstream layers' SSM data sources will resolve to missing or stale parameters — but this is a deliberate decommissioning action, not a routine change. |
 | **data/** — add DB instance | `data/` only | None | Compute/ai read connection endpoints, not the existence of instances. |
 | **compute/** or **ai/** — modify service | That layer only | None | No downstream layers depend on compute or ai. |
 
 ### The key insight
 
-The only "dangerous" changes are **removing an output that downstream layers depend on**. This is:
+The only "dangerous" changes are **removing an SSM parameter that downstream layers depend on**. This is:
 
-1. **Caught at plan time** — `terraform_remote_state` shows the output as `no longer present`
-2. **Gated by Atlantis** — every apply requires a plan review
-3. **Requires a PR** — deleting a role is a deliberate code change, not an accident
+1. **Caught at plan time** — the SSM data source returns a `ValidationError` or resolves to a deleted ARN
+2. **Gated by `ssm-contract.yaml`** — every environment has a dependency manifest. A CI check validates that no published parameter is removed while downstream consumers still exist.
+3. **Gated by Atlantis** — every apply requires a plan review
+4. **Requires a PR** — deleting a role is a deliberate code change, not an accident
 
 In practice, the most common change (adding a new permission to an existing role in `iam/`) has
 zero blast radius beyond `iam/` itself. This is the standard multi-layer pattern used by regulated
@@ -73,9 +74,8 @@ AWS organizations at scale — it keeps state files small, plans fast, and audit
 If you apply a change that **removes or renames** an upstream output, downstream layers will fail
 on their next plan. The discipline is:
 
-> **Never remove an output from `outputs.tf` without checking `terraform_remote_state` references
+> **Never remove an SSM parameter resource from `outputs.tf` without checking `ssm-contract.yaml`
 > across all downstream layers in the same environment.**
 
-This is enforced by the PR review process, not by code — and it's sufficient for an early-stage
-team. As you scale, add `opa eval` rules that detect `terraform_remote_state` references to
-nonexistent outputs.
+This is enforced by CI via `ssm-contract.yaml (manual review)`, which validates that every published
+SSM parameter still has its consumers listed — and that no parameter is removed while consumers remain.

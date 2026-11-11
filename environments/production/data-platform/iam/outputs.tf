@@ -14,7 +14,7 @@
 # never via terraform_remote_state.
 # ─────────────────────────────────────────────────────────────────────────────
 
-# ── Standard outputs (for terraform_remote_state within the same apply chain) ─
+# ── Standard outputs (for tofu output) ─
 output "app_kms_key_arn" {
   description = "KMS key ARN for encryption at rest in this account."
   value       = local.app_kms_key_arn

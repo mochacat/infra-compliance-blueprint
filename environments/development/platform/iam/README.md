@@ -15,20 +15,20 @@ Creates the IAM roles and a dev KMS key used by downstream layers in this accoun
 
 ## Safety: why this layer is safe to change
 
-- **Adding a new role** — zero blast radius. Downstream layers don't reference it until you add a `terraform_remote_state` data source for it.
-- **Adding a policy to an existing role** — low blast radius. Downstream layers read the role ARN, not the policy content. New permissions are available on their next plan refresh.
-- **Removing a role** — **caught at plan time**. Downstream layers fail validation because the remote state output is missing. Atlantis blocks the apply.
+- **Adding a new role** — zero blast radius. Downstream layers don't reference it until you add an SSM data source for it.
+- **Adding a policy to an existing role** — low blast radius. Downstream layers read the role ARN from SSM, not the policy content. New permissions are available on their next plan refresh.
+- **Removing a role** — **caught at plan time**. Downstream layers fail validation because the SSM parameter is gone. Check `ssm-contract.yaml` first.
 
-## Remote state contract
+## Cross-layer contract (SSM-only)
 
-Downstream layers read these outputs from `iam/` via `terraform_remote_state`:
+Downstream layers read these outputs from `iam/` via SSM Parameter Store (never `terraform_remote_state`):
 
 - `ecs_task_exec_role_arn` / `ecs_service_role_arn` → compute/
 - `sagemaker_execution_role_arn` / `sagemaker_execution_role_name` → ai/
 - `rds_proxy_role_arn` → data/
 - `app_kms_key_arn` → network/, data/, compute/, ai/
 
-> **Never remove an output** without checking all downstream `terraform_remote_state` references.
+> **Never remove a published SSM parameter** without checking `ssm-contract.yaml` for all downstream consumers.
 
 ## Pillar compliance
 

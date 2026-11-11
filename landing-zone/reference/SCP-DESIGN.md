@@ -23,7 +23,7 @@
 
 ---
 
-## 2. SCP Catalog
+## 2. SCP Catalog (10 policies)
 
 ### SCP 1: DenyRootUserActions
 
@@ -263,6 +263,7 @@ Organization Root
 ├── EnforceEncryptionAtRest
 ├── DenyCloudTrailDisable
 ├── EnforceMandatoryTags
+├── ProtectSSMParameters
 │
 ├── OU: Infra-Control-Plane
 │   ├── (inherits root SCPs)
@@ -299,4 +300,54 @@ Organization Root
 └── OU: Sandbox
     ├── (inherits root SCPs only — no PublicAccess, no Prod SCPs)
     └── Account: sandbox
+```
+
+---
+
+### SCP 10: ProtectSSMParameters
+
+**Target:** Organization Root (all accounts)
+**Effect:** Only the Atlantis execution role (and an admin break-glass role) can
+create, update, or delete SSM parameters under `/environments/*` and
+`/infrastructure/*`. Prevents a rogue principal from tampering with the
+cross-layer SSM contract that downstream layers depend on.
+
+This is the **defense-in-depth** layer for the SSM-only cross-layer
+communication pattern described in `CLAUDE.md`. The module layer enforces
+that outputs are published as SSM parameters, the `ssm-contract.yaml`
+manifest tracks who consumes them, and this SCP ensures only Atlantis can
+modify them.
+
+Supports HIPAA §164.312(c)(1) (integrity — protect against unauthorized
+modification of system configuration) and SOC 2 CC6.1 (logical and physical
+access controls).
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenySSMParameterWriteByNonAtlantis",
+      "Effect": "Deny",
+      "Action": [
+        "ssm:PutParameter",
+        "ssm:DeleteParameter",
+        "ssm:DeleteParameters",
+        "ssm:LabelParameterVersion"
+      ],
+      "Resource": [
+        "arn:aws:ssm:*:*:parameter/environments/*",
+        "arn:aws:ssm:*:*:parameter/infrastructure/*"
+      ],
+      "Condition": {
+        "ArnNotLike": {
+          "aws:PrincipalArn": [
+            "arn:aws:iam::*:role/atlantis-*",
+            "arn:aws:iam::*:role/admin-*"
+          ]
+        }
+      }
+    }
+  ]
+}
 ```

@@ -1,0 +1,120 @@
+# ssm-contract.yaml — Cross-layer SSM dependency manifest
+#
+# Lists every SSM parameter published by a terraservice that downstream
+# layers consume. Use this to check before removing a parameter.
+#
+# Each environment/BU follows the same template (shown once).
+# Concrete entries in each environment directory state only
+# environment-specific overrides.
+
+version: 1
+
+# ── Template (used by all environment/BU combos) ───────────────────────────
+template:
+  iam:
+    apply_order: 1
+    publishes:
+      - kms-key-arn
+      - ecs-task-exec-role-arn
+      - ecs-task-exec-role-name
+      - ecs-service-role-arn
+      - sagemaker-exec-role-arn
+      - sagemaker-exec-role-name
+      - rds-proxy-role-arn
+    consumes: []
+
+  network:
+    apply_order: 2
+    publishes:
+      - vpc-id
+      - app-subnet-ids
+      - data-subnet-ids
+      - default-sg-id
+    consumes:
+      - kms-key-arn
+      - ecs-task-exec-role-arn
+      - ecs-service-role-arn
+
+  data:
+    apply_order: 3
+    publishes:
+      - pgvector-endpoint
+      - pgvector-reader-endpoint
+      - pgvector-proxy-endpoint
+      - opensearch-endpoint
+    consumes:
+      - kms-key-arn       # from iam
+      - rds-proxy-role-arn # from iam
+      - vpc-id             # from network
+      - data-subnet-ids    # from network
+      - default-sg-id      # from network
+      - ecs-task-exec-role-arn  # from iam (passthrough via compute)
+      - sagemaker-exec-role-arn # from iam (passthrough via ai)
+
+  compute:
+    apply_order: 4
+    publishes:
+      - ecs-task-exec-role-arn  # passthrough from iam
+    consumes:
+      - kms-key-arn
+      - ecs-task-exec-role-arn
+      - ecs-service-role-arn
+      - vpc-id
+      - app-subnet-ids
+      - default-sg-id
+
+  ai:
+    apply_order: 5
+    publishes:
+      - sagemaker-exec-role-arn  # passthrough from iam
+    consumes:
+      - kms-key-arn
+      - sagemaker-exec-role-arn
+      - sagemaker-exec-role-name
+      - vpc-id
+      - app-subnet-ids
+      - default-sg-id
+
+# ── SSM path convention: /environments/<env>/<bu>/<key> ────────────────────
+
+# ── Environments ───────────────────────────────────────────────────────────
+# Each lists its business units. If a BU follows the template, just set
+# `layers: [iam, network, data, compute, ai]`. Override only if different.
+environments:
+  development:
+    - business_unit: platform
+      layers: [iam, network, data, compute, ai]
+    - business_unit: research
+      layers: [iam, network, data, compute, ai]
+
+  preprod:
+    - business_unit: platform
+      layers: [iam, network, data, compute, ai]
+
+  production:
+    - business_unit: platform
+      layers: [iam, network, data, compute, ai]
+    - business_unit: research
+      layers: [iam, network, data, compute, ai]
+    - business_unit: data-platform
+      layers: [iam, network, data, compute, ai]
+
+  sandbox:
+    - business_unit: platform
+      layers: [iam, network]  # no data/compute/ai
+
+# ── Infrastructure control plane ───────────────────────────────────────────
+infrastructure:
+  network-hub:
+    network:
+      publishes:
+        - vpc-id
+        - vpc-cidr
+        - app-subnet-ids
+        - data-subnet-ids
+        - default-sg-id
+      consumes: []
+    transit-gateway:
+      publishes:
+        - transit-gateway-id
+      consumes: []

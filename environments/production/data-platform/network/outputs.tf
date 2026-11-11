@@ -8,7 +8,7 @@
 #   /environments/<env>/platform/default-sg-id
 #
 # Downstream layers (data, compute, ai) read these via aws_ssm_parameter
-# data sources, never via terraform_remote_state.
+# data sources from SSM Parameter Store, never via terraform_remote_state.
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── Standard outputs ──────────────────────────────────────────────────────────

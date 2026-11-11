@@ -1,0 +1,27 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenySSMParameterWriteByNonAtlantis",
+      "Effect": "Deny",
+      "Action": [
+        "ssm:PutParameter",
+        "ssm:DeleteParameter",
+        "ssm:DeleteParameters",
+        "ssm:LabelParameterVersion"
+      ],
+      "Resource": [
+        "arn:aws:ssm:*:*:parameter/environments/*",
+        "arn:aws:ssm:*:*:parameter/infrastructure/*"
+      ],
+      "Condition": {
+        "ArnNotLike": {
+          "aws:PrincipalArn": [
+            "arn:aws:iam::*:role/atlantis-*",
+            "arn:aws:iam::*:role/admin-*"
+          ]
+        }
+      }
+    }
+  ]
+}

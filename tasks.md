@@ -22,11 +22,11 @@ Docs: `landing-zone/README.md`, `landing-zone/reference/ARCHITECTURE.md`, `SCP-D
 - [x] GENAI-RUNTIME.md — GenAI agentic runtime module designs
 
 ### 1.2 Bootstrap terraservice (`landing-zone/bootstrap/`)
-- [x] Organization + OU structure + 9 SCPs + SSO
+- [x] Organization + OU structure + 10 SCPs + SSO
 - [x] Tests: `defaults.tftest.hcl`, `compliance.tftest.hcl` (14 pass)
 - [ ] Member accounts — reference note: commented out by design
 - [ ] Add `prod.tftest.hcl` to bootstrap
-- [ ] Verify SCP JSON files match the approved 9 SCPs in SCP-DESIGN
+- [ ] Verify SCP JSON files match the approved 10 SCPs in SCP-DESIGN
 
 ### 1.3 Baseline terraservice (`landing-zone/baseline/`)
 - [x] Immutable audit bucket, KMS key, CloudTrail, Config, GuardDuty, Security Hub, deploy-role
@@ -146,6 +146,8 @@ All 7 skills exist and are symlinked:
 ### 5.1 Present
 - [x] Makefile (`fmt-check`, `validate`, `checkov`, `plan`, `opa`, `test`, `infracost`, `review`, `all`, `symlink-skills`, `setup`)
 - [x] GitHub Actions `module-review.yml` — per-module review on PRs touching `modules/**`
+- [x] GitHub Actions `env-review.yml` — per-terraservice review on PRs touching `environments/**` (includes SSM contract OPA check)
+- [x] `policies/ssm-contract.rego` — OPA rule preventing SSM parameter removal with downstream consumers
 - [x] `scripts/setup-dev.sh` — dev tool installer
 
 ### 5.2 Missing
@@ -157,6 +159,8 @@ All 7 skills exist and are symlinked:
 - [ ] Drift detection (scheduled `tofu plan`)
 - [ ] Atlantis workflows for approval gates
 - [ ] Infracost on every PR (Atlantis integration)
+- [x] `ssm-contract.yaml` — dependency graph for PR review, enforced via OPA at plan time
+- [x] SCP 10 (ProtectSSMParameters) — restrict SSM write/delete to Atlantis role only
 
 ---
 
@@ -176,7 +180,8 @@ All 7 skills exist and are symlinked:
 
 | Area | Complete | Outstanding |
 |---|---|---|
-| Landing zone — reference docs | 4/4 | — |
+| Landing zone — SCPs | 10/10 designed, 10/10 deployed | SCP 10 (ProtectSSMParameters) added |
+| Landing zone — reference docs | updated (SCP 10) | — |
 | Landing zone — bootstrap | core complete | member accounts, prod test, SCP audit |
 | Landing zone — baseline | core complete | compliance + prod tests |
 | All modules P0–P2 (14 modules) | 14 built, tested, README'd | bedrock (deferred), ecs-service, elasticache, backup-vault, oidc-idp, security-hub |

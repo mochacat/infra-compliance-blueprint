@@ -8,7 +8,7 @@
 #   - rds-proxy            → assumed by RDS Proxy (data/)
 #
 # Each role is a dedicated resource — no shared service roles (Pillar 2).
-# Downstream layers read ARNs via terraform_remote_state.
+# Downstream layers read ARNs via SSM Parameter Store (not terraform_remote_state).
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── KMS key (dev convenience) ───────────────────────────────────────────────

@@ -141,7 +141,7 @@ variable "flow_log_destination" {
 
 # ── Transit Gateway (Pillar 3) ────────────────────────────────────────────────
 variable "transit_gateway_id" {
-  description = "The Network Hub Transit Gateway ID (tgw-xxx). Read via terraform_remote_state from infra-control-plane."
+  description = "The Network Hub Transit Gateway ID (tgw-xxx). Read via SSM Parameter Store from infra-control-plane (not terraform_remote_state)."
   type        = string
   nullable    = true
   default     = null

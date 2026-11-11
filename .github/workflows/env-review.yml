@@ -1,0 +1,234 @@
+# ── GitHub Actions CI Workflow ────────────────────────────────────────────
+#
+# Environment review on every change to environments/ (any push or PR).
+# Mirrors the /review-module pattern but for terraservice directories.
+#
+# Runs format, validate, Checkov, OPA (including SSM contract check),
+# tofu test, and optionally Infracost.
+#
+# NOTE: This workflow runs with dummy AWS credentials for plan-only
+# evaluation. Real applies go through Atlantis.
+#
+# Secrets:
+#   INFRACOST_API_KEY (optional — required for cost estimates)
+
+name: env-review
+
+on:
+  pull_request:
+    paths:
+      - "environments/**"
+      - "ssm-contract.yaml"
+      - "policies/**"
+      - "Makefile"
+      - ".github/workflows/env-review.yml"
+  push:
+    paths:
+      - "environments/**"
+      - "ssm-contract.yaml"
+      - "policies/**"
+      - "Makefile"
+      - ".github/workflows/env-review.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+env:
+  TOFU_VERSION: "1.13.2"
+  OPA_VERSION: "v1.20.2"
+  PYTHON_VERSION: "3.11"
+  AWS_ACCESS_KEY_ID: "ci-dummy"
+  AWS_SECRET_ACCESS_KEY: "ci-dummy"
+  AWS_REGION: "us-east-1"
+  AWS_DEFAULT_REGION: "us-east-1"
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  # Detect changed terraservice directories
+  # ─────────────────────────────────────────────────────────────────────────
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.set-services.outputs.services }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: List changed terraservices (PR) or all (push)
+        id: set-services
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Only services touched by this PR
+            CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- environments/ | \
+              grep -oP 'environments/[^/]+/[^/]+/[^/]+' | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          else
+            # All services on push to main
+            CHANGED=$(find environments/ -mindepth 3 -maxdepth 3 -type d | sort | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          fi
+          echo "services=$CHANGED" >> "$GITHUB_OUTPUT"
+          echo "Services: $CHANGED"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 1. lint — Fast static checks (fmt + validate)
+  # ─────────────────────────────────────────────────────────────────────────
+  lint:
+    needs: detect
+    if: ${{ fromJson(needs.detect.outputs.services)[0] != null }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.detect.outputs.services) }}
+    name: lint / ${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.TOFU_VERSION }}
+      - name: Format check
+        run: make fmt-check MODULE_PATH=${{ matrix.service }}
+      - name: Validate
+        run: make validate MODULE_PATH=${{ matrix.service }}
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 2. checkov — Compliance static analysis
+  # ─────────────────────────────────────────────────────────────────────────
+  checkov:
+    needs: detect
+    if: ${{ fromJson(needs.detect.outputs.services)[0] != null }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.detect.outputs.services) }}
+    name: checkov / ${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install checkov
+      - name: Sanitize artifact name
+        id: artifact
+        run: |
+          NAME=$(echo "${{ matrix.service }}" | tr '/' '-')
+          echo "name=checkov-report-${NAME}" >> "$GITHUB_OUTPUT"
+      - run: |
+          checkov --framework terraform \
+            -d ${{ matrix.service }} \
+            --compact \
+            --quiet \
+            --output cli \
+            --output junitxml \
+            --output-file-path console,checkov-report.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: checkov-report.xml
+          if-no-files-found: ignore
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 3. opa — Custom Rego policy evaluation (SSM contract + local policies)
+  # ─────────────────────────────────────────────────────────────────────────
+  opa:
+    needs: detect
+    if: ${{ fromJson(needs.detect.outputs.services)[0] != null }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.detect.outputs.services) }}
+    name: opa / ${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.TOFU_VERSION }}
+      - uses: open-policy-agent/setup-opa@v2
+        with:
+          version: ${{ env.OPA_VERSION }}
+      - name: Generate plan
+        run: make plan-ci MODULE_PATH=${{ matrix.service }}
+      - name: Run local OPA policies
+        if: hashFiles(format('{0}/policies/**', matrix.service)) != ''
+        run: make opa MODULE_PATH=${{ matrix.service }}
+      - name: Skip local OPA — no policies directory
+        if: hashFiles(format('{0}/policies/**', matrix.service)) == ''
+        run: echo "No local policies/ — skipping"
+      - name: Run SSM contract OPA check
+        run: make opa-ssm MODULE_PATH=${{ matrix.service }}
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 4. test — tofu test suite (where tests/ directory exists)
+  # ─────────────────────────────────────────────────────────────────────────
+  test:
+    needs: detect
+    if: ${{ fromJson(needs.detect.outputs.services)[0] != null }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.detect.outputs.services) }}
+    name: test / ${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.TOFU_VERSION }}
+      - name: Check for tests directory
+        id: has_tests
+        run: |
+          if [ -d "${{ matrix.service }}/tests" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Run tofu test suite
+        if: steps.has_tests.outputs.exists == 'true'
+        run: make test MODULE_PATH=${{ matrix.service }}
+      - name: Skipped — no tests directory
+        if: steps.has_tests.outputs.exists == 'false'
+        run: echo "No tests/ directory — skipping tests"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 5. infracost — Cost estimate (disabled by default)
+  # ─────────────────────────────────────────────────────────────────────────
+  infracost:
+    needs: detect
+    if: false
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.detect.outputs.services) }}
+    name: infracost / ${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Infracost
+        run: |
+          curl -fsSL "https://raw.githubusercontent.com/infracost/cli/master/scripts/install.sh" | sh
+      - name: Sanitize artifact name
+        id: cost-artifact
+        run: |
+          NAME=$(echo "${{ matrix.service }}" | tr '/' '-')
+          echo "name=infracost-report-${NAME}" >> "$GITHUB_OUTPUT"
+      - name: Run Infracost
+        env:
+          INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
+        run: |
+          infracost breakdown \
+            --path ${{ matrix.service }} \
+            --format table \
+            --out-file infracost-report.txt
+          cat infracost-report.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ steps.cost-artifact.outputs.name }}
+          path: infracost-report.txt
+          if-no-files-found: ignore
