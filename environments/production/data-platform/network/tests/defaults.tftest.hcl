@@ -4,8 +4,9 @@ run "plan_defaults" {
   command = plan
 
   variables {
-    environment        = "prod"
-    region             = "us-east-1"
+    business_unit       = "data-platform"
+    environment         = "prod"
+    region              = "us-east-1"
     data_classification = "internal"
   }
 

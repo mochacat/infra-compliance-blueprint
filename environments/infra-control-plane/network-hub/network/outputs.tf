@@ -85,7 +85,7 @@ locals {
 resource "aws_ssm_parameter" "vpc_id" {
   name        = "${local.ssm_base_path}/vpc-id"
   description = "Hub VPC ID."
-  type        = "String"
+  type        = "SecureString"
   value       = module.vpc.vpc_id
   tags        = local.base_tags
 }
@@ -93,7 +93,7 @@ resource "aws_ssm_parameter" "vpc_id" {
 resource "aws_ssm_parameter" "vpc_cidr" {
   name        = "${local.ssm_base_path}/vpc-cidr"
   description = "Hub VPC CIDR block."
-  type        = "String"
+  type        = "SecureString"
   value       = var.vpc_cidr
   tags        = local.base_tags
 }
@@ -117,7 +117,7 @@ resource "aws_ssm_parameter" "data_subnet_ids" {
 resource "aws_ssm_parameter" "default_sg_id" {
   name        = "${local.ssm_base_path}/default-sg-id"
   description = "Hub VPC default security group ID."
-  type        = "String"
+  type        = "SecureString"
   value       = module.vpc.default_security_group_id
   tags        = local.base_tags
 }

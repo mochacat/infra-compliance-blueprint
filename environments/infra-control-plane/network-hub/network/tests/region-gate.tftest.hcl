@@ -16,12 +16,12 @@ run "fail_unapproved_region" {
   command = plan
 
   variables {
-    environment        = "prod"
-    name               = "network-hub"
-    region             = "us-east-2"
+    environment         = "prod"
+    name                = "network-hub"
+    region              = "us-east-2"
     data_classification = "internal"
-    vpc_cidr           = "100.64.0.0/24"
-    transit_gateway_id = "tgw-0123456789abcdef0"
-    spoke_cidrs        = []
+    vpc_cidr            = "100.64.0.0/24"
+    transit_gateway_id  = "tgw-0123456789abcdef0"
+    spoke_cidrs         = []
   }
 }

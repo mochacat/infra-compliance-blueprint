@@ -40,7 +40,7 @@ run "fail_phi_not_sovereign" {
     data_residency = {
       sovereign_only = false
     }
-    kms_key_arn = "arn:aws:kms:us-east-1:111122223333:key/12345678-1234-1234-1234-123456789012"
+    kms_key_arn  = "arn:aws:kms:us-east-1:111122223333:key/12345678-1234-1234-1234-123456789012"
     participants = ["111122223333"]
   }
 

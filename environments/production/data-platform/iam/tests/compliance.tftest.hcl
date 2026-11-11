@@ -4,10 +4,11 @@ run "plan_without_boundary" {
   command = plan
 
   variables {
-    environment         = "prod"
-    region              = "us-east-1"
+    business_unit            = "data-platform"
+    environment              = "prod"
+    region                   = "us-east-1"
     permissions_boundary_arn = null
-    data_classification = "internal"
+    data_classification      = "internal"
   }
 
   # The iam-role module does not require a permissions boundary in dev (only prod)

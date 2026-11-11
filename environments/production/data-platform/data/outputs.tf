@@ -59,7 +59,7 @@ output "compliance_controls" {
 resource "aws_ssm_parameter" "pgvector_endpoint" {
   name        = "/environments/${var.environment}/${var.business_unit}/pgvector-endpoint"
   description = "Aurora pgvector writer endpoint for ${var.environment}/data-platform"
-  type        = "String"
+  type        = "SecureString"
   value       = module.pgvector.cluster_endpoint
   key_id      = data.aws_ssm_parameter.kms_key_arn.value
   tags        = local.base_tags
@@ -68,7 +68,7 @@ resource "aws_ssm_parameter" "pgvector_endpoint" {
 resource "aws_ssm_parameter" "pgvector_reader_endpoint" {
   name        = "/environments/${var.environment}/${var.business_unit}/pgvector-reader-endpoint"
   description = "Aurora pgvector reader endpoint for ${var.environment}/data-platform"
-  type        = "String"
+  type        = "SecureString"
   value       = module.pgvector.cluster_reader_endpoint
   key_id      = data.aws_ssm_parameter.kms_key_arn.value
   tags        = local.base_tags
@@ -77,7 +77,7 @@ resource "aws_ssm_parameter" "pgvector_reader_endpoint" {
 resource "aws_ssm_parameter" "pgvector_proxy_endpoint" {
   name        = "/environments/${var.environment}/${var.business_unit}/pgvector-proxy-endpoint"
   description = "RDS Proxy endpoint for ${var.environment}/data-platform"
-  type        = "String"
+  type        = "SecureString"
   value       = module.pgvector.proxy_endpoint
   key_id      = data.aws_ssm_parameter.kms_key_arn.value
   tags        = local.base_tags
@@ -86,7 +86,7 @@ resource "aws_ssm_parameter" "pgvector_proxy_endpoint" {
 resource "aws_ssm_parameter" "opensearch_collection_endpoint" {
   name        = "/environments/${var.environment}/${var.business_unit}/opensearch-endpoint"
   description = "OpenSearch Serverless collection endpoint for ${var.environment}/data-platform"
-  type        = "String"
+  type        = "SecureString"
   value       = module.opensearch.collection_endpoint
   key_id      = data.aws_ssm_parameter.kms_key_arn.value
   tags        = local.base_tags

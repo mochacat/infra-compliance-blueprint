@@ -16,9 +16,9 @@ run "fail_phi_not_sovereign" {
   command = plan
 
   variables {
-    environment        = "prod"
-    name               = "network-hub"
-    region             = "us-east-1"
+    environment         = "prod"
+    name                = "network-hub"
+    region              = "us-east-1"
     data_classification = "phi"
     data_residency = {
       sovereign_only = false

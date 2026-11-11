@@ -22,12 +22,12 @@ run "fail_cidr_overlap_with_spoke" {
   command = plan
 
   variables {
-    environment        = "prod"
-    name               = "network-hub"
-    region             = "us-east-1"
+    environment         = "prod"
+    name                = "network-hub"
+    region              = "us-east-1"
     data_classification = "internal"
-    vpc_cidr           = "10.0.0.0/16"  # overlaps with dev-platform
-    transit_gateway_id = "tgw-0123456789abcdef0"
+    vpc_cidr            = "10.0.0.0/16" # overlaps with dev-platform
+    transit_gateway_id  = "tgw-0123456789abcdef0"
     spoke_cidrs = [
       { name = "dev-platform", cidr = "10.0.0.0/16" },
     ]

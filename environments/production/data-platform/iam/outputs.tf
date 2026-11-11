@@ -71,7 +71,7 @@ locals {
 resource "aws_ssm_parameter" "kms_key_arn" {
   name        = "${local.ssm_base_path}/kms-key-arn"
   description = "KMS key ARN for ${var.environment}/data-platform"
-  type        = "String"
+  type        = "SecureString"
   value       = local.app_kms_key_arn
   key_id      = local.app_kms_key_arn
   tags        = local.base_tags
@@ -80,7 +80,7 @@ resource "aws_ssm_parameter" "kms_key_arn" {
 resource "aws_ssm_parameter" "ecs_task_exec_role_arn" {
   name        = "${local.ssm_base_path}/ecs-task-exec-role-arn"
   description = "ECS task execution role ARN for ${var.environment}/data-platform"
-  type        = "String"
+  type        = "SecureString"
   value       = module.ecs_task_exec_role.role_arn
   key_id      = local.app_kms_key_arn
   tags        = local.base_tags
@@ -89,7 +89,7 @@ resource "aws_ssm_parameter" "ecs_task_exec_role_arn" {
 resource "aws_ssm_parameter" "ecs_task_exec_role_name" {
   name        = "${local.ssm_base_path}/ecs-task-exec-role-name"
   description = "ECS task execution role name for ${var.environment}/data-platform"
-  type        = "String"
+  type        = "SecureString"
   value       = module.ecs_task_exec_role.role_name
   key_id      = local.app_kms_key_arn
   tags        = local.base_tags
@@ -98,7 +98,7 @@ resource "aws_ssm_parameter" "ecs_task_exec_role_name" {
 resource "aws_ssm_parameter" "ecs_service_role_arn" {
   name        = "${local.ssm_base_path}/ecs-service-role-arn"
   description = "ECS service role ARN for ${var.environment}/data-platform"
-  type        = "String"
+  type        = "SecureString"
   value       = module.ecs_service_role.role_arn
   key_id      = local.app_kms_key_arn
   tags        = local.base_tags
@@ -107,7 +107,7 @@ resource "aws_ssm_parameter" "ecs_service_role_arn" {
 resource "aws_ssm_parameter" "sagemaker_exec_role_arn" {
   name        = "${local.ssm_base_path}/sagemaker-exec-role-arn"
   description = "SageMaker execution role ARN for ${var.environment}/data-platform"
-  type        = "String"
+  type        = "SecureString"
   value       = module.sagemaker_execution_role.role_arn
   key_id      = local.app_kms_key_arn
   tags        = local.base_tags
@@ -116,7 +116,7 @@ resource "aws_ssm_parameter" "sagemaker_exec_role_arn" {
 resource "aws_ssm_parameter" "sagemaker_exec_role_name" {
   name        = "${local.ssm_base_path}/sagemaker-exec-role-name"
   description = "SageMaker execution role name for ${var.environment}/data-platform"
-  type        = "String"
+  type        = "SecureString"
   value       = module.sagemaker_execution_role.role_name
   key_id      = local.app_kms_key_arn
   tags        = local.base_tags
@@ -125,7 +125,7 @@ resource "aws_ssm_parameter" "sagemaker_exec_role_name" {
 resource "aws_ssm_parameter" "rds_proxy_role_arn" {
   name        = "${local.ssm_base_path}/rds-proxy-role-arn"
   description = "RDS Proxy role ARN for ${var.environment}/data-platform"
-  type        = "String"
+  type        = "SecureString"
   value       = module.rds_proxy_role.role_arn
   key_id      = local.app_kms_key_arn
   tags        = local.base_tags

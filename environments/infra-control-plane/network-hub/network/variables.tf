@@ -143,13 +143,13 @@ variable "spoke_cidrs" {
   }))
   nullable = false
   default = [
-    { name = "dev-platform",       cidr = "10.0.0.0/16" },
-    { name = "dev-research",       cidr = "10.1.0.0/16" },
-    { name = "preprod-platform",   cidr = "10.10.0.0/16" },
-    { name = "prod-platform",      cidr = "10.20.0.0/16" },
-    { name = "prod-research",      cidr = "10.21.0.0/16" },
+    { name = "dev-platform", cidr = "10.0.0.0/16" },
+    { name = "dev-research", cidr = "10.1.0.0/16" },
+    { name = "preprod-platform", cidr = "10.10.0.0/16" },
+    { name = "prod-platform", cidr = "10.20.0.0/16" },
+    { name = "prod-research", cidr = "10.21.0.0/16" },
     { name = "prod-data-platform", cidr = "10.22.0.0/16" },
-    { name = "sandbox-platform",   cidr = "10.255.0.0/16" },
+    { name = "sandbox-platform", cidr = "10.255.0.0/16" },
   ]
 }
 

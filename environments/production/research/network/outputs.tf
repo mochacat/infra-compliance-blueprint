@@ -67,7 +67,7 @@ locals {
 resource "aws_ssm_parameter" "vpc_id" {
   name        = "${local.ssm_base_path}/vpc-id"
   description = "VPC ID for ${var.environment}/research"
-  type        = "String"
+  type        = "SecureString"
   value       = module.vpc.vpc_id
   tags        = local.base_tags
 }
@@ -91,7 +91,7 @@ resource "aws_ssm_parameter" "data_subnet_ids" {
 resource "aws_ssm_parameter" "default_sg_id" {
   name        = "/environments/${var.environment}/${var.business_unit}/default-sg-id"
   description = "Default security group ID for ${var.environment}/research"
-  type        = "String"
+  type        = "SecureString"
   value       = module.vpc.default_security_group_id
   tags        = local.base_tags
 }

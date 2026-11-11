@@ -17,20 +17,20 @@
 
 name: module-review
 
-#on:
-#  # Every push to any branch touching modules/ (and the PR gate) runs the full
-#  # module check suite — fmt-check, validate, checkov, opa, test.
-#  pull_request:
-#    paths:
-#      - "modules/**"
-#      - "Makefile"
-#      - ".github/workflows/module-review.yml"
-#  push:
-#    paths:
-#      - "modules/**"
-#      - "Makefile"
-#      - ".github/workflows/module-review.yml"
-#  workflow_dispatch:
+on:
+  # Every push to any branch touching modules/ (and the PR gate) runs the full
+  # module check suite — fmt-check, validate, checkov, opa, test.
+  pull_request:
+    paths:
+      - "modules/**"
+      - "Makefile"
+      - ".github/workflows/module-review.yml"
+  push:
+    paths:
+      - "modules/**"
+      - "Makefile"
+      - ".github/workflows/module-review.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read

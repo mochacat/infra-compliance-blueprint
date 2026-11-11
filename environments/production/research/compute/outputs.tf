@@ -29,7 +29,7 @@ output "compliance_controls" {
 resource "aws_ssm_parameter" "ecs_task_exec_role_arn" {
   name        = "/environments/${var.environment}/${var.business_unit}/ecs-task-exec-role-arn"
   description = "ECS task execution role ARN for ${var.environment}/research"
-  type        = "String"
+  type        = "SecureString"
   value       = data.aws_ssm_parameter.ecs_task_exec_role_arn.value
   key_id      = data.aws_ssm_parameter.kms_key_arn.value
   tags        = local.base_tags
