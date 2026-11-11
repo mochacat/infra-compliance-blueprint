@@ -17,6 +17,7 @@ override.tf.json
 *.tfvars
 *.tfvars.json
 !*.tfvars.example
+!ci.auto.tfvars
 *.pem
 *.key
 
