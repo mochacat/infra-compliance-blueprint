@@ -144,20 +144,23 @@ All 7 skills exist and are symlinked:
 ## 5. CI / automation
 
 ### 5.1 Present
-- [x] Makefile (`fmt-check`, `validate`, `checkov`, `plan`, `opa`, `test`, `infracost`, `review`, `all`, `symlink-skills`, `setup`)
+- [x] Makefile (`fmt-check`, `validate`, `checkov`, `plan`, `opa`, `test`, `infracost`, `review`, `all`, `symlink-skills`, `setup`, `opa-ssm`, `ssm-contract-json`)
 - [x] GitHub Actions `module-review.yml` — per-module review on PRs touching `modules/**`
 - [x] GitHub Actions `env-review.yml` — per-terraservice review on PRs touching `environments/**` (includes SSM contract OPA check)
 - [x] `policies/ssm-contract.rego` — OPA rule preventing SSM parameter removal with downstream consumers
 - [x] `scripts/setup-dev.sh` — dev tool installer
+- [x] `scripts/check-downstream.sh` — Atlantis plan-time downstream layer dependency warning
+- [x] `scripts/check-ssm-drift.sh` — Atlantis pre-apply SSM parameter existence check (enforces apply ordering)
 
 ### 5.2 Missing
-- [ ] `.github/CODEOWNERS`
-- [ ] Atlantis config (`atlantis.yaml`, `repos.yaml`)
+- [x] `.github/CODEOWNERS` — infra-team, platform-team, genai-team, data-team, research-team, @cat (admin)
+- [x] Atlantis config (`atlantis.yaml` — 37 projects, 3 workflows, workflow_mode: multi)
+- [x] `docs/repos.yaml` — server-level config reference (repo allowlist, OIDC, IAM policy)
+- [x] `docs/atlantis-setup.md` — OIDC setup, webhook config, SSM permissions, state backend, OPA install
 - [ ] OIDC federation setup docs / workflow
 - [ ] Commit signing enforcement (GPG, signed tags, branch protection)
 - [ ] Auto-tag/SBOM on merge to main
 - [ ] Drift detection (scheduled `tofu plan`)
-- [ ] Atlantis workflows for approval gates
 - [ ] Infracost on every PR (Atlantis integration)
 - [x] `ssm-contract.yaml` — dependency graph for PR review, enforced via OPA at plan time
 - [x] SCP 10 (ProtectSSMParameters) — restrict SSM write/delete to Atlantis role only
@@ -187,4 +190,4 @@ All 7 skills exist and are symlinked:
 | All modules P0–P2 (14 modules) | 14 built, tested, README'd | bedrock (deferred), ecs-service, elasticache, backup-vault, oidc-idp, security-hub |
 | **Environments / terraservices** | **8 BUs scaffolded (dev/plat, dev/research, preprod/plat, prod/plat, prod/research, prod/data-platform, sandbox/plat, infra-cp/network-hub)** | **customization items per env** |
 | Skills | 7/7 built | re-verify after modules land |
-| CI | checkov/opa/test/infracost workflow | CODEOWNERS, Atlantis, OIDC, signing, drift, tag/SBOM |
+| CI | checkov/opa/test/infracost workflow, CODEOWNERS, Atlantis config | OIDC, signing, drift, tag/SBOM |

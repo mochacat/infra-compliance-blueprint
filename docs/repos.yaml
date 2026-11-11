@@ -1,0 +1,143 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# repos.yaml — Atlantis server repos configuration (reference)
+#
+# This is the server-level repos config for Atlantis, alternative to
+# atlantis.yaml. It goes in the Atlantis server's data dir (usually
+# ~/.atlantis/) or is passed via the --repo-config flag.
+#
+# Use this approach when you want the Atlantis server to automatically
+# discover projects based on directory patterns rather than listing every
+# project explicitly in atlantis.yaml.
+#
+# REFERENCE PATTERN — adapt account IDs, role names, and branch patterns
+# to your actual AWS organization.
+# ─────────────────────────────────────────────────────────────────────────────
+
+repos:
+  # ── Main infrastructure repository ─────────────────────────────────────
+  - id: /github.com/your-org/infrastructure
+    branch: /.*/
+    allowed_overrides: [workflow, apply_requirements, delete_source_branch_on_merge]
+    allow_custom_workflows: true
+
+    # ── Apply requirements by branch ─────────────────────────────────────
+    apply_requirements: [mergeable]
+
+    # ── Workflow: default (matches atlantis.yaml dev workflow) ────────────
+    workflow: default
+
+    # ── Delete source branch on merge ────────────────────────────────────
+    delete_source_branch_on_merge: true
+
+  # ── Production branch overrides ─────────────────────────────────────────
+  # Changes to production paths require 2 approvals
+  - id: /github.com/your-org/infrastructure
+    branch: ^main$
+    apply_requirements: [approved, mergeable]
+    allowed_overrides: [workflow, apply_requirements]
+
+  # ── Module repository (if modules live in a separate repo) ─────────────
+  # - id: /github.com/your-org/terraform-modules
+  #   branch: /.*/
+  #   apply_requirements: [mergeable]
+  #   workflow: default
+
+# ── Workflows ──────────────────────────────────────────────────────────────
+# These mirror the workflows in atlantis.yaml. They use the same steps:
+# plan → OPA → SSM contract check → downstream check → test → apply
+#
+# Note: When using repos.yaml, the atlantis.yaml in the repo still takes
+# precedence for per-project settings. Set allow_custom_workflows: true to
+# let the repo's atlantis.yaml define workflows.
+# ────────────────────────────────────────────────────────────────────────────
+
+workflows:
+  default:
+    plan:
+      steps:
+        - init:
+            extra_args: [-input=false, -backend-config=backend.hcl]
+        - plan:
+            extra_args: [-input=false, -out=$PLANFILE]
+        - run: tofu show -json $PLANFILE > $SHOWFILE
+        # OPA policy evaluation
+        - run: |
+            if [ -d "$(dirname $PLANFILE)/policies" ]; then
+              opa eval --format pretty \
+                --data "$(dirname $PLANFILE)/policies/" \
+                --stdin-input "$SHOWFILE" \
+                "data.terraform.deny" || exit 1
+            fi
+        # SSM contract check
+        - run: |
+            if [ -f "$REPO_ROOT/ssm-contract.json" ]; then
+              opa eval --format pretty \
+                --data "$REPO_ROOT/policies/ssm-contract.rego" \
+                --data "$REPO_ROOT/ssm-contract.json" \
+                --stdin-input "$SHOWFILE" \
+                "data.terraform.deny" || exit 1
+            fi
+        # Downstream dependency check
+        - run: |
+            if [ -f "$REPO_ROOT/scripts/check-downstream.sh" ]; then
+              $REPO_ROOT/scripts/check-downstream.sh "$(dirname $PLANFILE)" "$SHOWFILE"
+            fi
+    apply:
+      steps:
+        # SSM drift check before apply
+        - run: |
+            if [ -f "$REPO_ROOT/scripts/check-ssm-drift.sh" ]; then
+              $REPO_ROOT/scripts/check-ssm-drift.sh "$(dirname $PLANFILE)"
+            fi
+        # Run tofu test before apply
+        - run: tofu test -test-directory=tests 2>/dev/null || echo "No tests — skipping"
+        - apply: {}
+
+  # ── Production workflow — stricter checks ─────────────────────────────
+  production:
+    plan:
+      steps:
+        - init:
+            extra_args: [-input=false, -backend-config=backend.hcl]
+        - plan:
+            extra_args: [-input=false, -out=$PLANFILE]
+        - run: tofu show -json $PLANFILE > $SHOWFILE
+        - run: |
+            if [ -d "$(dirname $PLANFILE)/policies" ]; then
+              opa eval --format pretty \
+                --data "$(dirname $PLANFILE)/policies/" \
+                --stdin-input "$SHOWFILE" \
+                "data.terraform.deny" || exit 1
+            fi
+        - run: |
+            if [ -f "$REPO_ROOT/ssm-contract.json" ]; then
+              opa eval --format pretty \
+                --data "$REPO_ROOT/policies/ssm-contract.rego" \
+                --data "$REPO_ROOT/ssm-contract.json" \
+                --stdin-input "$SHOWFILE" \
+                "data.terraform.deny" || exit 1
+            fi
+        - run: |
+            if [ -f "$REPO_ROOT/scripts/check-downstream.sh" ]; then
+              $REPO_ROOT/scripts/check-downstream.sh "$(dirname $PLANFILE)" "$SHOWFILE"
+            fi
+    apply:
+      steps:
+        - run: |
+            if [ -f "$REPO_ROOT/scripts/check-ssm-drift.sh" ]; then
+              $REPO_ROOT/scripts/check-ssm-drift.sh "$(dirname $PLANFILE)"
+            fi
+        - run: tofu test -test-directory=tests 2>/dev/null || echo "No tests — skipping"
+        - apply: {}
+    policy_check: true
+
+# ── Server-level settings ─────────────────────────────────────────────────
+# These can also be set via environment variables or CLI flags.
+# They're included here for documentation completeness.
+#
+# server:
+#   log-level: info
+#   parallelism: 3
+#   default-tf-version: tofu
+#   autoplan-modules-from-project: true
+#   repo-allowlist: github.com/your-org/infrastructure

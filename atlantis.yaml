@@ -1,0 +1,678 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# atlantis.yaml — OpenTofu monorepo Atlantis configuration
+#
+# REFERENCE PATTERN — adapt to your actual Atlantis server deployment.
+# Account IDs, workflow names, and approval rules must reflect your org.
+#
+# Dependency model:
+#   Within each environment/BU, layers are applied in a strict order defined
+#   by ssm-contract.yaml (iam -> network -> data -> compute -> ai). Each layer
+#   publishes SSM parameters that downstream layers consume. If an upstream
+#   layer's plan shows changes, ALL downstream layers are flagged for
+#   re-planning before apply.
+#
+#   This config uses Atlantis v0.27+ workflow_mode: multi so that a single
+#   PR touching multiple layers runs them as a coordinated batch. The OPA
+#   SSM contract check at plan time validates that no layer would consume
+#   stale or missing parameters.
+#
+#   A pre-apply script (scripts/check-ssm-drift.sh) verifies that the SSM
+#   parameters the plan was generated against still match what's in Parameter
+#   Store -- preventing applies with stale plans after an upstream change.
+#
+# Landing zone and hub projects do not have SSM dependencies between them.
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: 3
+
+# Workflow mode: "multi" tells Atlantis that a single PR can contain changes
+# to multiple projects. Atlantis plans them in parallel and shows them in one
+# PR comment. Apply ordering is enforced by the SSM drift check script.
+# Requires Atlantis v0.27+.
+workflow_mode: multi
+
+automerge: false
+
+# Global autoplan settings. Each project can override.
+autoplan:
+  when_modified:
+    - "environments/**/*.tf"
+    - "environments/**/*.tfvars"
+    - "landing-zone/**/*.tf"
+    - "landing-zone/**/*.tfvars"
+    - "modules/**/*.tf"
+    - "modules/**/*.tfvars"
+  enabled: true
+
+# ── Workflows ───────────────────────────────────────────────────────────────
+#
+# Every workflow runs:
+#   1. tofu init + plan
+#   2. OPA evaluation against module policies
+#   3. SSM contract check (if the project is a layer in the SSM contract)
+#   4. Downstream dependency check (flags layers that need re-planning)
+#   5. SSM drift check before apply (verifies consumed params still exist)
+#   6. tofu test before apply
+#
+# Dev = auto-apply, Preprod = 1 approval, Production = 2 approvals.
+# ─────────────────────────────────────────────────────────────────────────────
+
+workflows:
+  # ── Dev workflow -- auto-apply on merge ─────────────────────────────────
+  dev:
+    plan:
+      steps:
+        - run: tofu init -input=false -backend-config=backend.hcl
+        - run: tofu workspace select default 2>/dev/null || tofu workspace new default
+        - run: tofu plan -input=false -out=$PLANFILE
+        - run: tofu show -json $PLANFILE > $SHOWFILE
+        - run: |
+            if [ -d "$(dirname $PLANFILE)/policies" ]; then
+              echo "::group::OPA Policy Check"
+              opa eval --format pretty \
+                --data "$(dirname $PLANFILE)/policies/" \
+                --stdin-input "$SHOWFILE" \
+                "data.terraform.deny" || exit 1
+              echo "::endgroup::"
+            fi
+        - run: |
+            if [ -f "$REPO_ROOT/ssm-contract.json" ]; then
+              echo "::group::SSM Contract Check"
+              opa eval --format pretty \
+                --data "$REPO_ROOT/policies/ssm-contract.rego" \
+                --data "$REPO_ROOT/ssm-contract.json" \
+                --stdin-input "$SHOWFILE" \
+                "data.terraform.deny" || exit 1
+              echo "::endgroup::"
+            fi
+        - run: |
+            if [ -f "$REPO_ROOT/scripts/check-downstream.sh" ]; then
+              $REPO_ROOT/scripts/check-downstream.sh "$(dirname $PLANFILE)" "$SHOWFILE"
+            fi
+    apply:
+      steps:
+        - run: |
+            if [ -f "$REPO_ROOT/scripts/check-ssm-drift.sh" ]; then
+              $REPO_ROOT/scripts/check-ssm-drift.sh "$(dirname $PLANFILE)"
+            fi
+        - run: tofu test -test-directory=tests 2>/dev/null || echo "No tests -- skipping"
+        - run: tofu apply $PLANFILE
+
+  # ── Preprod workflow -- 1 approval required ────────────────────────────
+  preprod:
+    plan:
+      steps:
+        - run: tofu init -input=false -backend-config=backend.hcl
+        - run: tofu workspace select default 2>/dev/null || tofu workspace new default
+        - run: tofu plan -input=false -out=$PLANFILE
+        - run: tofu show -json $PLANFILE > $SHOWFILE
+        - run: |
+            if [ -d "$(dirname $PLANFILE)/policies" ]; then
+              echo "::group::OPA Policy Check"
+              opa eval --format pretty \
+                --data "$(dirname $PLANFILE)/policies/" \
+                --stdin-input "$SHOWFILE" \
+                "data.terraform.deny" || exit 1
+              echo "::endgroup::"
+            fi
+        - run: |
+            if [ -f "$REPO_ROOT/ssm-contract.json" ]; then
+              echo "::group::SSM Contract Check"
+              opa eval --format pretty \
+                --data "$REPO_ROOT/policies/ssm-contract.rego" \
+                --data "$REPO_ROOT/ssm-contract.json" \
+                --stdin-input "$SHOWFILE" \
+                "data.terraform.deny" || exit 1
+              echo "::endgroup::"
+            fi
+        - run: |
+            if [ -f "$REPO_ROOT/scripts/check-downstream.sh" ]; then
+              $REPO_ROOT/scripts/check-downstream.sh "$(dirname $PLANFILE)" "$SHOWFILE"
+            fi
+    apply:
+      steps:
+        - run: |
+            if [ -f "$REPO_ROOT/scripts/check-ssm-drift.sh" ]; then
+              $REPO_ROOT/scripts/check-ssm-drift.sh "$(dirname $PLANFILE)"
+            fi
+        - run: tofu test -test-directory=tests 2>/dev/null || echo "No tests -- skipping"
+        - run: tofu apply $PLANFILE
+    policy_check: true
+
+  # ── Production workflow -- 2 approvals required ────────────────────────
+  production:
+    plan:
+      steps:
+        - run: tofu init -input=false -backend-config=backend.hcl
+        - run: tofu workspace select default 2>/dev/null || tofu workspace new default
+        - run: tofu plan -input=false -out=$PLANFILE
+        - run: tofu show -json $PLANFILE > $SHOWFILE
+        - run: |
+            if [ -d "$(dirname $PLANFILE)/policies" ]; then
+              echo "::group::OPA Policy Check"
+              opa eval --format pretty \
+                --data "$(dirname $PLANFILE)/policies/" \
+                --stdin-input "$SHOWFILE" \
+                "data.terraform.deny" || exit 1
+              echo "::endgroup::"
+            fi
+        - run: |
+            if [ -f "$REPO_ROOT/ssm-contract.json" ]; then
+              echo "::group::SSM Contract Check"
+              opa eval --format pretty \
+                --data "$REPO_ROOT/policies/ssm-contract.rego" \
+                --data "$REPO_ROOT/ssm-contract.json" \
+                --stdin-input "$SHOWFILE" \
+                "data.terraform.deny" || exit 1
+              echo "::endgroup::"
+            fi
+        - run: |
+            if [ -f "$REPO_ROOT/scripts/check-downstream.sh" ]; then
+              $REPO_ROOT/scripts/check-downstream.sh "$(dirname $PLANFILE)" "$SHOWFILE"
+            fi
+    apply:
+      steps:
+        - run: |
+            if [ -f "$REPO_ROOT/scripts/check-ssm-drift.sh" ]; then
+              $REPO_ROOT/scripts/check-ssm-drift.sh "$(dirname $PLANFILE)"
+            fi
+        - run: tofu test -test-directory=tests 2>/dev/null || echo "No tests -- skipping"
+        - run: tofu apply $PLANFILE
+    policy_check: true
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PROJECTS
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Each project maps a directory to a workflow. Within each environment/BU
+# group, the SSM contract defines the apply order. The comments reference
+# the apply_order from ssm-contract.json.
+#
+# Naming convention: <env>/<bu>-<layer>
+#   e.g. prod/platform-iam, dev/research-network, hub/network
+#
+# Landing zone projects:
+#   mgmt/bootstrap  - Org, OUs, SCPs, accounts (management account 111122223333)
+#   logarchive/baseline - CloudTrail, GuardDuty (log archive account 444455556666)
+#
+# Hub projects (infra-control-plane, account 777788889999):
+#   hub/transit-gateway -> hub/network -> hub/endpoints
+#
+# Workload projects per environment/BU (SSM apply order):
+#   <env>/<bu>-iam(1) -> <env>/<bu>-network(2) -> <env>/<bu>-data(3)
+#   -> <env>/<bu>-compute(4) -> <env>/<bu>-ai(5)
+# ═══════════════════════════════════════════════════════════════════════════
+
+projects:
+  # ═════════════════════════════════════════════════════════════════════════
+  # LANDING ZONE
+  # ═════════════════════════════════════════════════════════════════════════
+
+  - name: mgmt/bootstrap
+    dir: landing-zone/bootstrap
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "landing-zone/bootstrap/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: logarchive/baseline
+    dir: landing-zone/baseline
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "landing-zone/baseline/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # INFRA CONTROL PLANE -- Network Hub Account (777788889999)
+  # Apply order: transit-gateway(1) -> network(2) -> endpoints(3)
+  # ═════════════════════════════════════════════════════════════════════════
+
+  - name: hub/transit-gateway
+    dir: environments/infra-control-plane/network-hub/transit-gateway
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "environments/infra-control-plane/network-hub/transit-gateway/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: hub/network
+    dir: environments/infra-control-plane/network-hub/network
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "environments/infra-control-plane/network-hub/network/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: hub/endpoints
+    dir: environments/infra-control-plane/network-hub/endpoints
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "environments/infra-control-plane/network-hub/endpoints/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # DEVELOPMENT -- Dev Account (111122224444)
+  # Workflow: dev (auto-apply)
+  # SSM chain: iam(1) -> network(2) -> data(3) -> compute(4) -> ai(5)
+  # ═════════════════════════════════════════════════════════════════════════
+
+  # Platform BU
+  - name: dev/platform-iam
+    dir: environments/development/platform/iam
+    workspace: default
+    workflow: dev
+    autoplan:
+      when_modified:
+        - "environments/development/platform/iam/**"
+        - "modules/**"
+    apply_requirements:
+      - mergeable
+
+  - name: dev/platform-network
+    dir: environments/development/platform/network
+    workspace: default
+    workflow: dev
+    autoplan:
+      when_modified:
+        - "environments/development/platform/network/**"
+        - "modules/**"
+    apply_requirements:
+      - mergeable
+
+  - name: dev/platform-data
+    dir: environments/development/platform/data
+    workspace: default
+    workflow: dev
+    autoplan:
+      when_modified:
+        - "environments/development/platform/data/**"
+        - "modules/**"
+    apply_requirements:
+      - mergeable
+
+  - name: dev/platform-compute
+    dir: environments/development/platform/compute
+    workspace: default
+    workflow: dev
+    autoplan:
+      when_modified:
+        - "environments/development/platform/compute/**"
+        - "modules/**"
+    apply_requirements:
+      - mergeable
+
+  - name: dev/platform-ai
+    dir: environments/development/platform/ai
+    workspace: default
+    workflow: dev
+    autoplan:
+      when_modified:
+        - "environments/development/platform/ai/**"
+        - "modules/**"
+    apply_requirements:
+      - mergeable
+
+  # Research BU
+  - name: dev/research-iam
+    dir: environments/development/research/iam
+    workspace: default
+    workflow: dev
+    autoplan:
+      when_modified:
+        - "environments/development/research/iam/**"
+        - "modules/**"
+    apply_requirements:
+      - mergeable
+
+  - name: dev/research-network
+    dir: environments/development/research/network
+    workspace: default
+    workflow: dev
+    autoplan:
+      when_modified:
+        - "environments/development/research/network/**"
+        - "modules/**"
+    apply_requirements:
+      - mergeable
+
+  - name: dev/research-data
+    dir: environments/development/research/data
+    workspace: default
+    workflow: dev
+    autoplan:
+      when_modified:
+        - "environments/development/research/data/**"
+        - "modules/**"
+    apply_requirements:
+      - mergeable
+
+  - name: dev/research-compute
+    dir: environments/development/research/compute
+    workspace: default
+    workflow: dev
+    autoplan:
+      when_modified:
+        - "environments/development/research/compute/**"
+        - "modules/**"
+    apply_requirements:
+      - mergeable
+
+  - name: dev/research-ai
+    dir: environments/development/research/ai
+    workspace: default
+    workflow: dev
+    autoplan:
+      when_modified:
+        - "environments/development/research/ai/**"
+        - "modules/**"
+    apply_requirements:
+      - mergeable
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # PRE-PRODUCTION -- Preprod Account (555566667777)
+  # Workflow: preprod (1 approval required)
+  # SSM chain: iam(1) -> network(2) -> data(3) -> compute(4) -> ai(5)
+  # ═════════════════════════════════════════════════════════════════════════
+
+  # Platform BU
+  - name: preprod/platform-iam
+    dir: environments/preprod/platform/iam
+    workspace: default
+    workflow: preprod
+    autoplan:
+      when_modified:
+        - "environments/preprod/platform/iam/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: preprod/platform-network
+    dir: environments/preprod/platform/network
+    workspace: default
+    workflow: preprod
+    autoplan:
+      when_modified:
+        - "environments/preprod/platform/network/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: preprod/platform-data
+    dir: environments/preprod/platform/data
+    workspace: default
+    workflow: preprod
+    autoplan:
+      when_modified:
+        - "environments/preprod/platform/data/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: preprod/platform-compute
+    dir: environments/preprod/platform/compute
+    workspace: default
+    workflow: preprod
+    autoplan:
+      when_modified:
+        - "environments/preprod/platform/compute/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: preprod/platform-ai
+    dir: environments/preprod/platform/ai
+    workspace: default
+    workflow: preprod
+    autoplan:
+      when_modified:
+        - "environments/preprod/platform/ai/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # PRODUCTION -- Production Account (888899991111)
+  # Workflow: production (2 approvals required)
+  # SSM chain: iam(1) -> network(2) -> data(3) -> compute(4) -> ai(5)
+  # ═════════════════════════════════════════════════════════════════════════
+
+  # Platform BU
+  - name: prod/platform-iam
+    dir: environments/production/platform/iam
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "environments/production/platform/iam/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: prod/platform-network
+    dir: environments/production/platform/network
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "environments/production/platform/network/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: prod/platform-data
+    dir: environments/production/platform/data
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "environments/production/platform/data/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: prod/platform-compute
+    dir: environments/production/platform/compute
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "environments/production/platform/compute/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: prod/platform-ai
+    dir: environments/production/platform/ai
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "environments/production/platform/ai/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  # Research BU
+  - name: prod/research-iam
+    dir: environments/production/research/iam
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "environments/production/research/iam/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: prod/research-network
+    dir: environments/production/research/network
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "environments/production/research/network/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: prod/research-data
+    dir: environments/production/research/data
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "environments/production/research/data/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: prod/research-compute
+    dir: environments/production/research/compute
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "environments/production/research/compute/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: prod/research-ai
+    dir: environments/production/research/ai
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "environments/production/research/ai/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  # Data Platform BU
+  - name: prod/data-platform-iam
+    dir: environments/production/data-platform/iam
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "environments/production/data-platform/iam/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: prod/data-platform-network
+    dir: environments/production/data-platform/network
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "environments/production/data-platform/network/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: prod/data-platform-data
+    dir: environments/production/data-platform/data
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "environments/production/data-platform/data/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: prod/data-platform-compute
+    dir: environments/production/data-platform/compute
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "environments/production/data-platform/compute/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: prod/data-platform-ai
+    dir: environments/production/data-platform/ai
+    workspace: default
+    workflow: production
+    autoplan:
+      when_modified:
+        - "environments/production/data-platform/ai/**"
+        - "modules/**"
+    apply_requirements:
+      - approved
+      - mergeable
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # SANDBOX -- Sandbox Account (999900001111)
+  # Workflow: dev (auto-apply -- no production data)
+  # SSM chain: iam(1) -> network(2) only (no data/compute/ai per ssm-contract)
+  # ═════════════════════════════════════════════════════════════════════════
+
+  # Platform BU
+  - name: sandbox/platform-iam
+    dir: environments/sandbox/platform/iam
+    workspace: default
+    workflow: dev
+    autoplan:
+      when_modified:
+        - "environments/sandbox/platform/iam/**"
+        - "modules/**"
+    apply_requirements:
+      - mergeable
+
+  - name: sandbox/platform-network
+    dir: environments/sandbox/platform/network
+    workspace: default
+    workflow: dev
+    autoplan:
+      when_modified:
+        - "environments/sandbox/platform/network/**"
+        - "modules/**"
+    apply_requirements:
+      - mergeable

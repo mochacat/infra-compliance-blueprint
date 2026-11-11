@@ -21,6 +21,11 @@ on:
       - "ssm-contract.yaml"
       - "policies/**"
       - "Makefile"
+      - "atlantis.yaml"
+      - "docs/atlantis-setup.md"
+      - "docs/repos.yaml"
+      - "scripts/check-downstream.sh"
+      - "scripts/check-ssm-drift.sh"
       - ".github/workflows/env-review.yml"
   push:
     paths:
@@ -28,6 +33,11 @@ on:
       - "ssm-contract.yaml"
       - "policies/**"
       - "Makefile"
+      - "atlantis.yaml"
+      - "docs/atlantis-setup.md"
+      - "docs/repos.yaml"
+      - "scripts/check-downstream.sh"
+      - "scripts/check-ssm-drift.sh"
       - ".github/workflows/env-review.yml"
   workflow_dispatch:
 

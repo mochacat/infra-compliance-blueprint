@@ -1,0 +1,77 @@
+# CODEOWNERS — Anestoa Infrastructure Monorepo
+#
+# Ownership model:
+# - @cat (repo owner) has admin-level access to everything (handled by GitHub repo settings)
+# - @infra-team owns the landing zone, control plane, and root-level tooling
+# - @platform-team owns the platform environment layers and shared infrastructure modules
+# - @genai-team owns the GenAI/agentic runtime modules and AI environment layers
+# - @data-team owns the data layers and data modules
+# - @research-team owns the research environments
+# - More specific paths take precedence over less specific ones
+# - Order: most specific first, least specific last
+
+# ============================================================
+# Landing zone & control plane (@infra-team)
+# ============================================================
+/landing-zone/                                @infra-team
+/environments/infra-control-plane/             @infra-team
+/environments/sandbox/                         @infra-team
+
+# ============================================================
+# Root-level tooling & config (@infra-team)
+# ============================================================
+/.github/                                      @infra-team
+/Makefile                                      @infra-team
+/CLAUDE.md                                     @infra-team
+/README.md                                     @infra-team
+/tasks.md                                      @infra-team
+/scripts/                                      @infra-team
+/policies/                                     @infra-team
+/ssm-contract.yaml                             @infra-team
+/ssm-contract.json                             @infra-team
+
+# ============================================================
+# Platform environment layers (@platform-team)
+# ============================================================
+/environments/*/platform/                      @platform-team
+
+# ============================================================
+# Shared platform modules (@platform-team)
+# ============================================================
+/modules/aws/vpc/                              @platform-team
+/modules/aws/iam-role/                         @platform-team
+/modules/aws/kms-key/                          @platform-team
+/modules/aws/s3-bucket/                        @platform-team
+/modules/aws/ecs-cluster/                      @platform-team
+/modules/aws/rds-pgvector/                     @platform-team
+/modules/aws/transit-gateway-attachment/       @platform-team
+/modules/aws/vpc-endpoint/                     @platform-team
+/modules/aws/cross-account-role/               @platform-team
+/modules/aws/deploy-role/                      @platform-team
+/modules/aws/cloudtrail/                       @platform-team
+
+# ============================================================
+# GenAI / agentic runtime modules (@genai-team)
+# ============================================================
+/modules/aws/opensearch-collection/            @genai-team
+/modules/aws/sagemaker-domain/                 @genai-team
+/modules/aws/bedrock-endpoint/                 @genai-team
+/modules/aws/bedrock-guardrail/                @genai-team
+
+# GenAI environment layers (@genai-team)
+/environments/*/ai/                            @genai-team
+
+# ============================================================
+# Data layers & data modules (@data-team)
+# ============================================================
+/environments/*/data/                          @data-team
+
+# ============================================================
+# Research environments (@research-team)
+# ============================================================
+/environments/*/research/                      @research-team
+
+# ============================================================
+# Default — repo owner
+# ============================================================
+*                                                @cat
