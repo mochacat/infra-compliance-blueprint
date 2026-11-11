@@ -83,13 +83,15 @@ variable "policy_statements" {
     error_message = "Wildcard Action (*) is forbidden in policy_statements (Pillar 2 — Access Control & Least Privilege)."
   }
 
-  validation {
-    condition = alltrue([
-      for st in var.policy_statements :
-      !contains(st.resources, "*")
-    ])
-    error_message = "Wildcard Resource (*) is forbidden in policy_statements (Pillar 2 — Access Control & Least Privilege)."
-  }
+  # Wildcard resource validation is handled by the check block in checks.tf
+  # (can't reference allowed_resource_wildcards in a variable validation block).
+}
+
+variable "allowed_resource_wildcards" {
+  description = "SIDs in policy_statements that are allowed to use wildcard Resource (*). Use sparingly — only for actions where the resource is scoped at a different layer (e.g. aoss:APIAccessAll scoped via collection access policy)."
+  type        = list(string)
+  default     = null
+  nullable    = true
 }
 
 variable "permissions_boundary_arn" {

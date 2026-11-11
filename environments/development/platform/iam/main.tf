@@ -100,6 +100,8 @@ module "ecs_service_role" {
     }]
   })
 
+  allowed_resource_wildcards = ["AOSSReadWrite"]
+
   policy_statements = [
     {
       sid       = "AOSSReadWrite"

@@ -66,8 +66,7 @@ variable "business_unit" {
     error_message = "Must be one of: platform, research, data-platform."
   }
 }
-
- {
+variable "data_classification" {
   description = "Data classification: internal, pii, phi, financial, cardholder"
   type        = string
   nullable    = false

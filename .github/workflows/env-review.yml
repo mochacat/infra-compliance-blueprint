@@ -146,12 +146,18 @@ jobs:
     name: opa / ${{ matrix.service }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install pyyaml
       - uses: opentofu/setup-opentofu@v1
         with:
           tofu_version: ${{ env.TOFU_VERSION }}
       - uses: open-policy-agent/setup-opa@v2
         with:
           version: ${{ env.OPA_VERSION }}
+      - name: Generate SSM contract JSON
+        run: make ssm-contract-json
       - name: Generate plan
         run: make plan-ci MODULE_PATH=${{ matrix.service }}
       - name: Run local OPA policies

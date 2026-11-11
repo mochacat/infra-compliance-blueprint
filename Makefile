@@ -90,22 +90,24 @@ symlink-skills:
 opa-ssm:
 	which opa >/dev/null 2>&1 || (echo "opa not found — run 'make setup'" && exit 0)
 	test -f $(MODULE_PATH)/plan.json || (echo "No plan.json — run 'make plan' first" && exit 0)
-	# Convert ssm-contract.yaml to JSON inline for OPA data
-	@python3 -c "import yaml,json,sys; print(json.dumps(yaml.safe_load(open('$(REPO_ROOT)/ssm-contract.yaml'))))" > /tmp/ssm-contract.json; \
-	VIOLATIONS=$$(opa eval --format values --data policies/ssm-contract.rego --data /tmp/ssm-contract.json --input $(MODULE_PATH)/plan.json "count(data.terraform.deny)" 2>/dev/null || true); \
+	test -f $(REPO_ROOT)/ssm-contract.json || (echo "No ssm-contract.json — run 'make ssm-contract-json' first" && exit 1)
+	@VIOLATIONS=$$(opa eval --format values --data policies/ssm-contract.rego --data $(REPO_ROOT)/ssm-contract.json --input $(MODULE_PATH)/plan.json "count(data.terraform.deny)" 2>/dev/null || true); \
 	if [ -n "$$VIOLATIONS" ] && [ "$$VIOLATIONS" != "0" ] && [ "$$VIOLATIONS" != "[]" ]; then \
 		echo "::group::SSM Contract OPA violations in $(MODULE_PATH) ($$VIOLATIONS)"; \
-		opa eval --format pretty --data policies/ssm-contract.rego --data /tmp/ssm-contract.json --input $(MODULE_PATH)/plan.json "data.terraform.deny[x]" 2>/dev/null; \
+		opa eval --format pretty --data policies/ssm-contract.rego --data $(REPO_ROOT)/ssm-contract.json --input $(MODULE_PATH)/plan.json "data.terraform.deny[x]" 2>/dev/null; \
 		echo "::endgroup::"; \
-		rm -f /tmp/ssm-contract.json; \
 		exit 1; \
 	else \
 		echo "SSM Contract OPA — no violations."; \
-	fi; \
-	rm -f /tmp/ssm-contract.json
+	fi
 
 .PHONY: opa-ssm-plan
 opa-ssm-plan: plan-ci opa-ssm
+
+.PHONY: ssm-contract-json
+ssm-contract-json:
+	python3 -c "import yaml,json; json.dump(yaml.safe_load(open('$(REPO_ROOT)/ssm-contract.yaml')), open('$(REPO_ROOT)/ssm-contract.json','w'), indent=2)"
+	@echo "Generated ssm-contract.json from ssm-contract.yaml"
 
 .PHONY: setup
 setup:

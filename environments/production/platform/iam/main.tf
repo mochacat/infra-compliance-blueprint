@@ -61,6 +61,8 @@ module "ecs_task_exec_role" {
     "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
   ]
 
+  allowed_resource_wildcards = ["AOSSReadWrite"]
+
   policy_statements = [
     {
       sid       = "KMSDecrypt"
@@ -99,6 +101,8 @@ module "ecs_service_role" {
       Action    = "sts:AssumeRole"
     }]
   })
+
+  allowed_resource_wildcards = ["AOSSReadWrite"]
 
   policy_statements = [
     {
@@ -145,6 +149,8 @@ module "sagemaker_execution_role" {
       Action    = "sts:AssumeRole"
     }]
   })
+
+  allowed_resource_wildcards = ["AOSSReadWrite"]
 
   policy_statements = [
     {
@@ -196,6 +202,8 @@ module "rds_proxy_role" {
       Action    = "sts:AssumeRole"
     }]
   })
+
+  allowed_resource_wildcards = ["AOSSReadWrite"]
 
   policy_statements = [
     {
