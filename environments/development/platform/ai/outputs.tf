@@ -33,7 +33,7 @@ output "compliance_controls" {
 
 # ── SSM parameter publication (cross-layer contract) ─────────────────────────
 resource "aws_ssm_parameter" "sagemaker_exec_role_arn" {
-  name        = "/environments/${var.environment}/platform/sagemaker-exec-role-arn"
+  name        = "/environments/${var.environment}/${var.business_unit}/sagemaker-exec-role-arn"
   description = "SageMaker execution role ARN for ${var.environment}/platform"
   type        = "String"
   value       = data.aws_ssm_parameter.sagemaker_exec_role_arn.value

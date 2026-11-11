@@ -38,7 +38,18 @@ variable "allowed_regions" {
 }
 
 # ── Pillar 7 — Data Residency & Sovereignty ───────────────────────────────────
-variable "data_classification" {
+# ── Business unit (for SSM path and naming) ──────────────────────────────────
+variable "business_unit" {
+  description = "Business unit for SSM path and resource naming: platform, research, data-platform."
+  type        = string
+  nullable    = false
+  validation {
+    condition     = contains(["platform", "research", "data-platform"], var.business_unit)
+    error_message = "Must be one of: platform, research, data-platform."
+  }
+}
+
+ {
   description = "Data classification: internal, pii, phi, financial, cardholder"
   type        = string
   nullable    = false

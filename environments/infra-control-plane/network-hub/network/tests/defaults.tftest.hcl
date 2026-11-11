@@ -21,9 +21,13 @@ variables {
   vpc_cidr             = "100.64.0.0/24"
   transit_gateway_id   = "tgw-0123456789abcdef0"
   spoke_cidrs = [
-    { name = "dev-platform",  cidr = "10.0.0.0/16" },
-    { name = "dev-research",  cidr = "10.1.0.0/16" },
-    { name = "prod-platform", cidr = "10.10.0.0/16" },
+    { name = "dev-platform",       cidr = "10.0.0.0/16" },
+    { name = "dev-research",       cidr = "10.1.0.0/16" },
+    { name = "preprod-platform",   cidr = "10.10.0.0/16" },
+    { name = "prod-platform",      cidr = "10.20.0.0/16" },
+    { name = "prod-research",      cidr = "10.21.0.0/16" },
+    { name = "prod-data-platform", cidr = "10.22.0.0/16" },
+    { name = "sandbox-platform",   cidr = "10.255.0.0/16" },
   ]
 }
 
@@ -80,7 +84,7 @@ run "test_compliance_controls" {
     error_message = "Environment must be reported in compliance_controls."
   }
   assert {
-    condition     = output.compliance_controls.spoke_count == 3
+    condition     = output.compliance_controls.spoke_count == 7
     error_message = "Spoke CIDR count must match the variable."
   }
   assert {

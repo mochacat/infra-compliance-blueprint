@@ -109,6 +109,9 @@ Docs: `landing-zone/README.md`, `landing-zone/reference/ARCHITECTURE.md`, `SCP-D
 **Customization checklist for the team cloning this reference:**
 - [x] DB credentials now use `manage_master_user_password = true` (RDS-managed) — no manual secret needed
 - [x] OpenSearch `iam.principal_arns` reads compute/ai role ARNs via SSM — no manual fill-in needed
+- [x] SSM paths now use `${var.business_unit}` instead of hardcoded `"platform"` — set `business_unit` per environment
+- [x] Each environment/BU has a unique VPC CIDR (no overlaps)
+- [x] Hub network's `spoke_cidrs` default now lists all known spoke CIDRs
 - [ ] Add a `data` source or appropriate lookup for `flow_log_destination.bucket_arn` — read from the baseline terraservice's remote state or a central config store
 - [ ] Uncomment Bedrock modules in `ai/main.tf` when ready
 - [ ] Adjust `region` and `subnets.availability_zones` to match your target region
@@ -116,15 +119,18 @@ Docs: `landing-zone/README.md`, `landing-zone/reference/ARCHITECTURE.md`, `SCP-D
 - [ ] Adjust the `data.aws_ram_resource_share` name filter in `network/data.tf` to match your hub TG share name
 
 ### 3.3 Production — `/Production/*`
-- [ ] `environments/production/platform/{iam,network,data,compute,ai}/`
-- [ ] `environments/production/research/{iam,network,data,compute,ai}/`
-- [ ] `environments/production/data-platform/{iam,network,data,compute,ai}/`
+- [x] `environments/production/platform/{iam,network,data,compute,ai}/` — cloned from dev/platform, prod CIDR 10.20.0.0/16
+- [x] `environments/production/research/{iam,network,data,compute,ai}/` — cloned from dev/platform, research CIDR 10.21.0.0/16
+- [x] `environments/production/data-platform/{iam,network,data,compute,ai}/` — cloned from dev/platform, data-platform CIDR 10.22.0.0/16
 
 ### 3.4 Pre-Production — `/Pre-Production/*`
-- [ ] `environments/preprod/platform/{iam,network,data,compute,ai}/`
+- [x] `environments/preprod/platform/{iam,network,data,compute,ai}/` — cloned from dev/platform, preprod CIDR 10.10.0.0/16
 
-### 3.5 Sandbox — `Sandbox` (minimal SCPs)
-- [ ] `environments/sandbox/platform/{iam,network}/`
+### 3.5 Development — `/Development/*`
+- [x] `environments/development/research/{iam,network,data,compute,ai}/` — cloned from dev/platform, research CIDR 10.1.0.0/16
+
+### 3.6 Sandbox — `Sandbox` (minimal SCPs)
+- [x] `environments/sandbox/platform/{iam,network}/` — cloned from dev/platform (iam + network only), sandbox CIDR 10.255.0.0/16
 
 ---
 
@@ -174,6 +180,6 @@ All 7 skills exist and are symlinked:
 | Landing zone — bootstrap | core complete | member accounts, prod test, SCP audit |
 | Landing zone — baseline | core complete | compliance + prod tests |
 | All modules P0–P2 (14 modules) | 14 built, tested, README'd | bedrock (deferred), ecs-service, elasticache, backup-vault, oidc-idp, security-hub |
-| **Environments / terraservices** | **dev/platform scaffolded (5 layers, 44+ files)** | **network-hub/endpoints, all other envs** |
+| **Environments / terraservices** | **8 BUs scaffolded (dev/plat, dev/research, preprod/plat, prod/plat, prod/research, prod/data-platform, sandbox/plat, infra-cp/network-hub)** | **customization items per env** |
 | Skills | 7/7 built | re-verify after modules land |
 | CI | checkov/opa/test/infracost workflow | CODEOWNERS, Atlantis, OIDC, signing, drift, tag/SBOM |

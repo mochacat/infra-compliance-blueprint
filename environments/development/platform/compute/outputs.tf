@@ -27,7 +27,7 @@ output "compliance_controls" {
 
 # ── SSM parameter publication (cross-layer contract) ─────────────────────────
 resource "aws_ssm_parameter" "ecs_task_exec_role_arn" {
-  name        = "/environments/${var.environment}/platform/ecs-task-exec-role-arn"
+  name        = "/environments/${var.environment}/${var.business_unit}/ecs-task-exec-role-arn"
   description = "ECS task execution role ARN for ${var.environment}/platform"
   type        = "String"
   value       = data.aws_ssm_parameter.ecs_task_exec_role_arn.value

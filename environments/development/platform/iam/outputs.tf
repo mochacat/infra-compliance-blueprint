@@ -65,7 +65,7 @@ output "compliance_controls" {
 
 # ── SSM parameter publication (cross-layer contract) ─────────────────────────
 locals {
-  ssm_base_path = "/environments/${var.environment}/platform"
+  ssm_base_path = "/environments/${var.environment}/${var.business_unit}"
 }
 
 resource "aws_ssm_parameter" "kms_key_arn" {

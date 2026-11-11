@@ -57,7 +57,7 @@ output "compliance_controls" {
 
 # ── SSM parameter publication (cross-layer contract) ─────────────────────────
 locals {
-  ssm_base_path = "/environments/${var.environment}/platform"
+  ssm_base_path = "/environments/${var.environment}/${var.business_unit}"
 
   # Flatten subnet IDs by tier for SSM publication
   flat_app_subnet_ids  = [for k, v in module.vpc.subnet_ids : v if can(regex("^app-", k))]
@@ -73,7 +73,7 @@ resource "aws_ssm_parameter" "vpc_id" {
 }
 
 resource "aws_ssm_parameter" "app_subnet_ids" {
-  name        = "/environments/${var.environment}/platform/app-subnet-ids"
+  name        = "/environments/${var.environment}/${var.business_unit}/app-subnet-ids"
   description = "App-tier subnet IDs for ${var.environment}/platform"
   type        = "StringList"
   value       = join(",", local.flat_app_subnet_ids)
@@ -81,7 +81,7 @@ resource "aws_ssm_parameter" "app_subnet_ids" {
 }
 
 resource "aws_ssm_parameter" "data_subnet_ids" {
-  name        = "/environments/${var.environment}/platform/data-subnet-ids"
+  name        = "/environments/${var.environment}/${var.business_unit}/data-subnet-ids"
   description = "Data-tier subnet IDs for ${var.environment}/platform"
   type        = "StringList"
   value       = join(",", local.flat_data_subnet_ids)
@@ -89,7 +89,7 @@ resource "aws_ssm_parameter" "data_subnet_ids" {
 }
 
 resource "aws_ssm_parameter" "default_sg_id" {
-  name        = "/environments/${var.environment}/platform/default-sg-id"
+  name        = "/environments/${var.environment}/${var.business_unit}/default-sg-id"
   description = "Default security group ID for ${var.environment}/platform"
   type        = "String"
   value       = module.vpc.default_security_group_id
