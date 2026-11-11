@@ -46,7 +46,9 @@ run "test_wildcard_action_rejected" {
   ]
 }
 
-# 2) A wildcard Resource must fail (variable validation).
+# 2) A wildcard Resource must fail (check block — wildcard resource moved
+#    from variable validation to a check block because it cross-references
+#    allowed_resource_wildcards).
 run "test_wildcard_resource_rejected" {
   command = plan
   variables {
@@ -60,7 +62,7 @@ run "test_wildcard_resource_rejected" {
     ]
   }
   expect_failures = [
-    var.policy_statements,
+    check.wildcard_resources,
   ]
 }
 

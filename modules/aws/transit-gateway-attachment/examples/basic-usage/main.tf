@@ -39,11 +39,11 @@ module "vpc" {
 module "tgw_attachment" {
   source = "../../transit-gateway-attachment"
 
-  environment         = var.environment
-  name                = "${var.environment}-${var.vpc_name}-tgw"
-  region              = var.region
-  transit_gateway_id  = var.transit_gateway_id
-  vpc_id              = module.vpc.vpc_id
+  environment        = var.environment
+  name               = "${var.environment}-${var.vpc_name}-tgw"
+  region             = var.region
+  transit_gateway_id = var.transit_gateway_id
+  vpc_id             = module.vpc.vpc_id
   subnet_ids = [
     module.vpc.subnet_ids["tgw-us-east-1a"],
     module.vpc.subnet_ids["tgw-us-east-1b"],

@@ -15,10 +15,10 @@ run "fail_unapproved_region" {
   command = plan
 
   variables {
-    environment      = "dev"
-    name             = "bad-region-trail"
-    region           = "us-east-2"
-    kms_key_arn      = "arn:aws:kms:us-east-1:123456789012:key/0a1b2c3d4e5f67890"
+    environment = "dev"
+    name        = "bad-region-trail"
+    region      = "us-east-2"
+    kms_key_arn = "arn:aws:kms:us-east-1:123456789012:key/0a1b2c3d4e5f67890"
   }
 
   expect_failures = [

@@ -15,10 +15,10 @@ run "fail_unapproved_region" {
   command = plan
 
   variables {
-    environment = "dev"
-    name        = "bad-region-aoss"
-    region      = "us-east-2"
-    kms_key_arn = "arn:aws:kms:us-east-1:123456789012:key/0a1b2c3d4e5f67890"
+    environment         = "dev"
+    name                = "bad-region-aoss"
+    region              = "us-east-2"
+    kms_key_arn         = "arn:aws:kms:us-east-1:123456789012:key/0a1b2c3d4e5f67890"
     data_classification = "internal"
     network = {
       vpc_id             = "vpc-0a1b2c3d4e5f67890"
@@ -40,10 +40,10 @@ run "fail_phi_not_sovereign" {
   command = plan
 
   variables {
-    environment = "prod"
-    name        = "phi-aoss"
-    region      = "us-east-1"
-    kms_key_arn = "arn:aws:kms:us-east-1:123456789012:key/0a1b2c3d4e5f67890"
+    environment         = "prod"
+    name                = "phi-aoss"
+    region              = "us-east-1"
+    kms_key_arn         = "arn:aws:kms:us-east-1:123456789012:key/0a1b2c3d4e5f67890"
     data_classification = "phi"
     data_residency = {
       sovereign_only = false
@@ -68,10 +68,10 @@ run "fail_short_retention" {
   command = plan
 
   variables {
-    environment = "dev"
-    name        = "short-retention-aoss"
-    region      = "us-east-1"
-    kms_key_arn = "arn:aws:kms:us-east-1:123456789012:key/0a1b2c3d4e5f67890"
+    environment         = "dev"
+    name                = "short-retention-aoss"
+    region              = "us-east-1"
+    kms_key_arn         = "arn:aws:kms:us-east-1:123456789012:key/0a1b2c3d4e5f67890"
     data_classification = "internal"
     network = {
       vpc_id             = "vpc-0a1b2c3d4e5f67890"
@@ -96,10 +96,10 @@ run "fail_single_az" {
   command = plan
 
   variables {
-    environment = "dev"
-    name        = "single-az-aoss"
-    region      = "us-east-1"
-    kms_key_arn = "arn:aws:kms:us-east-1:123456789012:key/0a1b2c3d4e5f67890"
+    environment         = "dev"
+    name                = "single-az-aoss"
+    region              = "us-east-1"
+    kms_key_arn         = "arn:aws:kms:us-east-1:123456789012:key/0a1b2c3d4e5f67890"
     data_classification = "internal"
     network = {
       vpc_id             = "vpc-0a1b2c3d4e5f67890"

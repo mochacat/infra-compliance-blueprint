@@ -12,17 +12,17 @@ provider "aws" {
 }
 
 variables {
-  environment         = "prod"
-  name                = "prod-core-tgw"
-  region              = "us-east-1"
-  transit_gateway_id  = "tgw-0a1b2c3d4e5f67890"
-  vpc_id              = "vpc-0a1b2c3d4e5f67890"
-  subnet_ids          = ["subnet-0a1b2c3d4e5f67890", "subnet-0a1b2c3d4e5f67891", "subnet-0a1b2c3d4e5f67892"]
-  appliance_mode_support = "enable"
+  environment                     = "prod"
+  name                            = "prod-core-tgw"
+  region                          = "us-east-1"
+  transit_gateway_id              = "tgw-0a1b2c3d4e5f67890"
+  vpc_id                          = "vpc-0a1b2c3d4e5f67890"
+  subnet_ids                      = ["subnet-0a1b2c3d4e5f67890", "subnet-0a1b2c3d4e5f67891", "subnet-0a1b2c3d4e5f67892"]
+  appliance_mode_support          = "enable"
   default_route_table_association = false
   transit_gateway_route_table_id  = "tgw-rtb-0a1b2c3d4e5f67890"
   propagate_to_route_table_id     = "tgw-rtb-0a1b2c3d4e5f67891"
-  data_classification = "internal"
+  data_classification             = "internal"
   data_residency = {
     sovereign_only = false
     jurisdiction   = "US"

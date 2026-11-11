@@ -15,7 +15,7 @@ check "wildcard_resources" {
     condition = alltrue([
       for st in var.policy_statements :
       contains(st.resources, "*") ? (
-        var.allowed_resource_wildcards != null && contains(var.allowed_resource_wildcards, st.sid)
+        var.allowed_resource_wildcards != null ? contains(var.allowed_resource_wildcards, st.sid) : false
       ) : true
     ])
     error_message = "Wildcard Resource (*) found in policy_statements without being listed in allowed_resource_wildcards (Pillar 2)."

@@ -16,17 +16,17 @@ run "fail_interface_single_az" {
   command = plan
 
   variables {
-    environment         = "dev"
-    name                = "single-az-endpoint"
-    region              = "us-east-1"
-    vpc_id              = "vpc-0a1b2c3d4e5f67890"
+    environment = "dev"
+    name        = "single-az-endpoint"
+    region      = "us-east-1"
+    vpc_id      = "vpc-0a1b2c3d4e5f67890"
     interface_endpoints = [
       {
         service    = "sts"
         subnet_ids = ["subnet-0a1b2c3d4e5f67890"]
       },
     ]
-    security_group_ids = ["sg-0a1b2c3d4e5f67890"]
+    security_group_ids  = ["sg-0a1b2c3d4e5f67890"]
     data_classification = "internal"
   }
 
@@ -42,10 +42,10 @@ run "fail_unapproved_region" {
   command = plan
 
   variables {
-    environment         = "dev"
-    name                = "bad-region"
-    region              = "us-east-2"
-    vpc_id              = "vpc-0a1b2c3d4e5f67890"
+    environment = "dev"
+    name        = "bad-region"
+    region      = "us-east-2"
+    vpc_id      = "vpc-0a1b2c3d4e5f67890"
     gateway_endpoints = [
       {
         service         = "s3"
@@ -65,10 +65,10 @@ run "fail_phi_not_sovereign" {
   command = plan
 
   variables {
-    environment         = "prod"
-    name                = "phi-endpoint"
-    region              = "us-east-1"
-    vpc_id              = "vpc-0a1b2c3d4e5f67890"
+    environment = "prod"
+    name        = "phi-endpoint"
+    region      = "us-east-1"
+    vpc_id      = "vpc-0a1b2c3d4e5f67890"
     gateway_endpoints = [
       {
         service         = "s3"

@@ -33,9 +33,9 @@ variables {
     skip_final_snapshot = false
   }
   network = {
-    vpc_id       = "vpc-0a1b2c3d4e5f67890"
-    subnet_ids   = ["subnet-0a1b2c3d4e5f67890", "subnet-0a1b2c3d4e5f67891", "subnet-0a1b2c3d4e5f67892"]
-    private_only = true
+    vpc_id        = "vpc-0a1b2c3d4e5f67890"
+    subnet_ids    = ["subnet-0a1b2c3d4e5f67890", "subnet-0a1b2c3d4e5f67891", "subnet-0a1b2c3d4e5f67892"]
+    private_only  = true
     allowed_cidrs = ["10.0.0.0/16"]
   }
   observability = {

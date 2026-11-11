@@ -12,10 +12,10 @@ provider "aws" {
 }
 
 variables {
-  environment         = "prod"
-  name                = "prod-core-endpoints"
-  region              = "us-east-1"
-  vpc_id              = "vpc-0a1b2c3d4e5f67890"
+  environment = "prod"
+  name        = "prod-core-endpoints"
+  region      = "us-east-1"
+  vpc_id      = "vpc-0a1b2c3d4e5f67890"
   gateway_endpoints = [
     {
       service         = "s3"

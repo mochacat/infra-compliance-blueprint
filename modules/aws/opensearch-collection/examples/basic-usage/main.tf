@@ -20,7 +20,7 @@ module "rag_vector_store" {
 
   collection = {
     type             = "VECTORSEARCH"
-    vector_dimension = 1536  # matches text-embedding-3-large
+    vector_dimension = 1536 # matches text-embedding-3-large
   }
 
   data_classification = "internal"

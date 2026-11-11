@@ -19,7 +19,7 @@ run "fail_phi_not_sovereign" {
     name                = "phi-cluster"
     region              = "us-east-1"
     kms_key_arn         = "arn:aws:kms:us-east-1:123456789012:key/0a1b2c3d4e5f67890"
-  secret_arn          = "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-db"
+    secret_arn          = "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-db"
     data_classification = "phi"
     data_residency = {
       sovereign_only = false
@@ -44,7 +44,7 @@ run "fail_unapproved_region" {
     name                = "bad-region-cluster"
     region              = "us-east-2"
     kms_key_arn         = "arn:aws:kms:us-east-1:123456789012:key/0a1b2c3d4e5f67890"
-  secret_arn          = "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-db"
+    secret_arn          = "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-db"
     data_classification = "internal"
     network = {
       vpc_id     = "vpc-0a1b2c3d4e5f67890"
@@ -66,7 +66,7 @@ run "fail_short_retention" {
     name                = "short-retention"
     region              = "us-east-1"
     kms_key_arn         = "arn:aws:kms:us-east-1:123456789012:key/0a1b2c3d4e5f67890"
-  secret_arn          = "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-db"
+    secret_arn          = "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-db"
     data_classification = "internal"
     backup = {
       retention_days = 14
