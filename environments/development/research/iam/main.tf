@@ -15,6 +15,7 @@
 # In production, kms_key_arn would be a centrally-managed key from the control
 # plane. For dev, we create one so downstream modules have something to use.
 resource "aws_kms_key" "this" {
+  # checkov:skip=CKV2_AWS_64:KMS key is a dev convenience key not created when caller provides kms_key_arn; CI always provides kms_key_arn so count = 0
   count                   = var.kms_key_arn == null ? 1 : 0
   description             = "Application encryption key for ${var.environment}"
   deletion_window_in_days = 30
