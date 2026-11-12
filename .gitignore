@@ -23,6 +23,9 @@ override.tf.json
 
 .codegraph
 
+# CI-generated provider config (dummy credentials for offline planning)
+_ci_provider.tf
+
 # Claude for now until I develop the skills
 .claude
 
