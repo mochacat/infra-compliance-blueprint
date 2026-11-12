@@ -118,6 +118,20 @@ variable "default_tags" {
 }
 
 # ── App naming ────────────────────────────────────────────────────────────────
+# ── Pillar 4 — Account ID (for least-privilege policy ARNs) ──────────────
+# The account id is required to build scoped IAM policy ARNs
+# (arn:aws:iam::<account>:role/...). Supplied by the caller; CI provides a
+# dummy value so plans generate offline without an STS call.
+variable "account_id" {
+  description = "AWS account ID used to scope IAM policy ARNs."
+  type        = string
+  nullable    = false
+  validation {
+    condition     = can(regex("^[0-9]{12}$", var.account_id))
+    error_message = "account_id must be a 12-digit AWS account ID."
+  }
+}
+
 variable "app_name" {
   description = "Short app name used in role names, e.g. 'rag-api'. Customize per workload."
   type        = string

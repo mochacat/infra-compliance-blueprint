@@ -73,7 +73,7 @@ module "ecs_task_exec_role" {
       sid       = "SecretsManagerRead"
       effect    = "Allow"
       actions   = ["secretsmanager:GetSecretValue"]
-      resources = ["arn:aws:secretsmanager:${var.region}:${data.aws_caller_identity.current.account_id}:secret:${var.app_name}-*"]
+      resources = ["arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:${var.app_name}-*"]
     },
   ]
 }
@@ -160,7 +160,7 @@ module "sagemaker_execution_role" {
       sid       = "ECRRead"
       effect    = "Allow"
       actions   = ["ecr:GetDownloadUrlForLayer", "ecr:BatchGetImage", "ecr:BatchCheckLayerAvailability"]
-      resources = ["*"]
+      resources = ["arn:aws:ecr:${var.region}:${var.account_id}:repository/${var.app_name}-*"]
     },
     {
       sid       = "KMSDecrypt"
@@ -172,7 +172,7 @@ module "sagemaker_execution_role" {
       sid       = "PassRole"
       effect    = "Allow"
       actions   = ["iam:PassRole"]
-      resources = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.role_prefix}-*"]
+      resources = ["arn:aws:iam::${var.account_id}:role/${local.role_prefix}-*"]
     },
   ]
 }
@@ -205,7 +205,7 @@ module "rds_proxy_role" {
       sid       = "SecretsManagerRead"
       effect    = "Allow"
       actions   = ["secretsmanager:GetSecretValue"]
-      resources = ["arn:aws:secretsmanager:${var.region}:${data.aws_caller_identity.current.account_id}:secret:${var.app_name}-*"]
+      resources = ["arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:${var.app_name}-*"]
     },
     {
       sid       = "KMSDecrypt"
@@ -216,5 +216,4 @@ module "rds_proxy_role" {
   ]
 }
 
-# ── Current account ID (used in policy ARN construction) ────────────────────
-data "aws_caller_identity" "current" {}
+

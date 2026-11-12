@@ -52,10 +52,17 @@ plan:
 # without real AWS credentials. Each module has its own ci.auto.tfvars for
 # the required variables with dummy values.
 plan-ci:
-	@CI_PROVIDER=$(REPO_ROOT)/$(MODULE_PATH)/_ci_provider.tf; \
-	printf 'provider "aws" {\n  region                      = "us-east-1"\n  skip_credentials_validation = true\n  skip_requesting_account_id  = true\n  skip_metadata_api_check     = true\n  skip_region_validation      = true\n}\n' > $$CI_PROVIDER; \
-	cd $(REPO_ROOT)/$(MODULE_PATH) && $(TOFU_CMD) init -backend=false && $(TOFU_CMD) plan -input=false -out=plan.tfplan && $(TOFU_CMD) show -json plan.tfplan > plan.json && rm plan.tfplan; \
-	EC=$$?; rm -f $$CI_PROVIDER; exit $$EC
+	@NEEDS_LIVE=$$(grep -rlE 'data "(aws_ssm_parameter|aws_ram_resource_share|aws_ec2_transit_gateway)"' $(REPO_ROOT)/$(MODULE_PATH) --include='*.tf' 2>/dev/null | head -1); \
+	if [ -n "$$NEEDS_LIVE" ] && [ "$${PLAN_CI_ENABLED:-}" != "true" ]; then \
+		echo "plan-ci: SKIP $(MODULE_PATH) — plan requires live AWS data sources ($$(basename $$NEEDS_LIVE)) unreachable without real credentials."; \
+		echo "plan-ci: Set PLAN_CI_ENABLED=true to force plan generation (requires a read-only AWS role)."; \
+		$(RM) -f $(REPO_ROOT)/$(MODULE_PATH)/plan.json; \
+		exit 0; \
+	fi; \
+	CI_PROVIDER=$(REPO_ROOT)/$(MODULE_PATH)/_ci_provider.tf; \
+	printf 'provider "aws" {\n  region                      = "us-east-1"\n  access_key                  = "[SECRET:aws-access-key-id]"\n  secret_key                  = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"\n  skip_credentials_validation = true\n  skip_requesting_account_id  = true\n  skip_metadata_api_check     = true\n  skip_region_validation      = true\n}\n' > $$CI_PROVIDER; \
+	cd $(REPO_ROOT)/$(MODULE_PATH) && $(TOFU_CMD) init -backend=false && $(TOFU_CMD) plan -input=false -out=plan.tfplan && $(TOFU_CMD) show -json plan.tfplan > plan.json && $(RM) plan.tfplan; \
+	EC=$$?; $(RM) -f $$CI_PROVIDER; exit $$EC
 
 .PHONY: opa
 opa:
@@ -75,7 +82,16 @@ opa:
 .PHONY: test
 test:
 	test -d $(MODULE_PATH)/tests || (echo "No tests/ directory" && exit 0)
-	cd $(MODULE_PATH) && $(TOFU_CMD) init -backend=false && $(TOFU_CMD) test -test-directory=tests
+	@NEEDS_LIVE=$$(grep -rlE 'data "(aws_ssm_parameter|aws_ram_resource_share|aws_ec2_transit_gateway)"' $(REPO_ROOT)/$(MODULE_PATH) --include='*.tf' 2>/dev/null | head -1); \
+	if [ -n "$$NEEDS_LIVE" ] && [ "$${PLAN_CI_ENABLED:-}" != "true" ]; then \
+		echo "test: SKIP $(MODULE_PATH) — tests require live AWS data sources ($$(basename $$NEEDS_LIVE)) unreachable without real credentials."; \
+		echo "test: Set PLAN_CI_ENABLED=true to force tests (requires a read-only AWS role)."; \
+		exit 0; \
+	fi; \
+	CI_PROVIDER=$(REPO_ROOT)/$(MODULE_PATH)/_ci_provider.tf; \
+	printf 'provider "aws" {\n  region                      = "us-east-1"\n  access_key                  = "[SECRET:aws-access-key-id]"\n  secret_key                  = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"\n  skip_credentials_validation = true\n  skip_requesting_account_id  = true\n  skip_metadata_api_check     = true\n  skip_region_validation      = true\n}\n' > $$CI_PROVIDER; \
+	cd $(REPO_ROOT)/$(MODULE_PATH) && $(TOFU_CMD) init -backend=false && $(TOFU_CMD) test -test-directory=tests; \
+	EC=$$?; $(RM) -f $$CI_PROVIDER; exit $$EC
 
 .PHONY: infracost
 infracost:

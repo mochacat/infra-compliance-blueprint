@@ -5,7 +5,7 @@ run "plan_without_boundary" {
 
   variables {
     business_unit            = "platform"
-    environment              = "sandbox"
+    environment              = "dev"
     region                   = "us-east-1"
     permissions_boundary_arn = null
     data_classification      = "internal"
