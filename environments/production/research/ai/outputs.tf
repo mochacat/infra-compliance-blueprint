@@ -25,7 +25,7 @@ output "compliance_controls" {
   value = {
     environment         = var.environment
     data_classification = var.data_classification
-    encryption_at_rest  = data.aws_ssm_parameter.kms_key_arn.value != null
+    encryption_at_rest  = data.aws_ssm_parameter.kms_key_arn.id != null
     vpc_only            = true
     deletion_protection = true
   }
