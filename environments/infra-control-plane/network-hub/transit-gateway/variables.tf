@@ -13,12 +13,12 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 variable "environment" {
-  description = "Environment: dev, test, staging, prod, commercial."
+  description = "Environment: dev, test, staging, prod, preprod, sandbox, commercial"
   type        = string
   nullable    = false
   validation {
-    condition     = contains(["dev", "test", "staging", "prod", "commercial"], var.environment)
-    error_message = "Must be one of: dev, test, staging, prod, commercial (Pillar 9 — Change Management & Policy Enforcement)."
+    condition     = contains(["dev", "test", "staging", "prod", "preprod", "sandbox", "commercial"], var.environment)
+    error_message = "Must be one of: dev, test, staging, prod, preprod, sandbox, commercial (Pillar 9 — Change Management & Policy Enforcement)."
   }
 }
 

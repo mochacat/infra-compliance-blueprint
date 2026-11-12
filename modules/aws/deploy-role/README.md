@@ -19,7 +19,7 @@ permissions boundary so it can never widen its own scope.
 | `allowed_subjects` | `list(string)` | `["repo:*:*:ref:refs/heads/main"]` | OIDC subjects allowed to assume |
 | `permissions_boundary_arn` | `string` | `null` | Boundary ARN applied to the role (required in prod) |
 | `tags` | `map(string)` | `{}` | Additional tags (merged with pillar tags) |
-| `environment` | `string` | — | Environment: dev, test, staging, prod, commercial |
+| `environment` | `string` | — | Environment: dev, test, staging, prod, preprod, sandbox, commercial |
 | `data_classification` | `string` | `"internal"` | Data classification: internal, pii, phi, financial, cardholder |
 | `data_residency` | `object` | `{}` | Residency constraints (sovereign_only, jurisdiction, etc.) |
 | `cost_controls` | `object` | `{ cost_center = null, project_code = null }` | Cost allocation tags |
