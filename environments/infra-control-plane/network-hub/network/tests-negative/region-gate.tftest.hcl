@@ -24,4 +24,8 @@ run "fail_unapproved_region" {
     transit_gateway_id  = "tgw-0123456789abcdef0"
     spoke_cidrs         = []
   }
+
+  expect_failures = [
+    check.region_approved,
+  ]
 }

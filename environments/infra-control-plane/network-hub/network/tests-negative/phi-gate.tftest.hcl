@@ -27,4 +27,8 @@ run "fail_phi_not_sovereign" {
     transit_gateway_id = "tgw-0123456789abcdef0"
     spoke_cidrs        = []
   }
+
+  expect_failures = [
+    check.phi_sovereign,
+  ]
 }
