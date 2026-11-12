@@ -69,8 +69,8 @@ opa:
 	which opa >/dev/null 2>&1 || (echo "opa not found — run 'make setup'" && exit 0)
 	test -d $(MODULE_PATH)/policies || (echo "No policies/ directory — skipping OPA" && exit 0)
 	test -f $(MODULE_PATH)/plan.json || (echo "No plan.json — run 'make plan' first" && exit 0)
-	@VIOLATIONS=$$(cd $(MODULE_PATH) && opa eval --format values --data policies/ --stdin-input plan.json "count(data.terraform.deny)" 2>/dev/null || true); \
-	if [ -n "$$VIOLATIONS" ] && [ "$$VIOLATIONS" != "0" ] && [ "$$VIOLATIONS" != "[]" ]; then \
+	@VIOLATIONS=$$(cd $(MODULE_PATH) && opa eval --format raw --data policies/ --stdin-input plan.json "count(data.terraform.deny)" 2>/dev/null || true); \
+	if [ -n "$$VIOLATIONS" ] && [ "$$VIOLATIONS" != "0" ]; then \
 		echo "::group::OPA violations in $(MODULE_PATH) ($$VIOLATIONS)"; \
 		cd $(MODULE_PATH) && opa eval --format pretty --data policies/ --stdin-input plan.json "data.terraform.deny[x]" 2>/dev/null; \
 		echo "::endgroup::"; \
@@ -107,8 +107,8 @@ opa-ssm:
 	which opa >/dev/null 2>&1 || (echo "opa not found — run 'make setup'" && exit 0)
 	test -f $(MODULE_PATH)/plan.json || (echo "No plan.json — run 'make plan' first" && exit 0)
 	test -f $(REPO_ROOT)/ssm-contract.json || (echo "No ssm-contract.json — run 'make ssm-contract-json' first" && exit 1)
-	@VIOLATIONS=$$(opa eval --format values --data policies/ssm-contract.rego --data $(REPO_ROOT)/ssm-contract.json --input $(MODULE_PATH)/plan.json "count(data.terraform.deny)" 2>/dev/null || true); \
-	if [ -n "$$VIOLATIONS" ] && [ "$$VIOLATIONS" != "0" ] && [ "$$VIOLATIONS" != "[]" ]; then \
+	@VIOLATIONS=$$(opa eval --format raw --data policies/ssm-contract.rego --data $(REPO_ROOT)/ssm-contract.json --input $(MODULE_PATH)/plan.json "count(data.terraform.deny)" 2>/dev/null || true); \
+	if [ -n "$$VIOLATIONS" ] && [ "$$VIOLATIONS" != "0" ]; then \
 		echo "::group::SSM Contract OPA violations in $(MODULE_PATH) ($$VIOLATIONS)"; \
 		opa eval --format pretty --data policies/ssm-contract.rego --data $(REPO_ROOT)/ssm-contract.json --input $(MODULE_PATH)/plan.json "data.terraform.deny[x]" 2>/dev/null; \
 		echo "::endgroup::"; \
